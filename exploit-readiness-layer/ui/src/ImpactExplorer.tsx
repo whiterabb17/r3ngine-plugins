@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -27,9 +27,10 @@ interface ImpactExplorerProps {
   projectSlug: string;
   vulnId: number;
   vulnName: string;
+  autoGenerate?: boolean;
 }
 
-export const ImpactExplorer: React.FC<ImpactExplorerProps> = ({ projectSlug, vulnId, vulnName }) => {
+export const ImpactExplorer: React.FC<ImpactExplorerProps> = ({ projectSlug, vulnId, vulnName, autoGenerate }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
   const [graphLoading, setGraphLoading] = useState(true);
@@ -41,8 +42,16 @@ export const ImpactExplorer: React.FC<ImpactExplorerProps> = ({ projectSlug, vul
     if (graphData && containerRef.current) {
       initGraph(graphData);
     }
+    return () => {
+      if (cyRef.current) {
+        cyRef.current.destroy();
+      }
+    };
+  }, [graphData]);
 
-    function initGraph(elements: any) {
+
+
+  function initGraph(elements: any) {
       if (!containerRef.current) return;
 
       if (cyRef.current) {
@@ -131,23 +140,25 @@ export const ImpactExplorer: React.FC<ImpactExplorerProps> = ({ projectSlug, vul
       setGraphLoading(false);
     }
 
-    return () => {
-      if (cyRef.current) {
-        cyRef.current.destroy();
-      }
-    };
-  }, [graphData]);
+
 
   const generateImpactMutation = useGenerateImpact(projectSlug);
 
-  const handleTriggerAiImpact = async () => {
+  const handleTriggerAiImpact = useCallback(async () => {
     try {
       await generateImpactMutation.mutateAsync(vulnId);
       // useImpactAssessment will automatically refetch due to polling if it sees status: false
     } catch (error) {
       console.error('Failed to trigger impact generation:', error);
     }
-  };
+  }, [vulnId, generateImpactMutation]);
+
+  // Auto-trigger impact generation if requested and no assessment exists
+  useEffect(() => {
+    if (autoGenerate && assessment && (assessment as any).status === false && !generateImpactMutation.isPending) {
+      handleTriggerAiImpact();
+    }
+  }, [autoGenerate, assessment, handleTriggerAiImpact]);
 
   const resetZoom = () => cyRef.current?.fit(undefined, 50);
   const exportPNG = () => {
@@ -234,7 +245,43 @@ export const ImpactExplorer: React.FC<ImpactExplorerProps> = ({ projectSlug, vul
               )
             }
           >
-            <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, position: 'relative', minHeight: 200 }}>
+              {/* Assessing Overlay */}
+              {(generateImpactMutation.isPending || (assessment && (assessment as any).status === false && autoGenerate)) && (
+                <Box sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  bgcolor: 'rgba(15, 23, 42, 0.9)',
+                  zIndex: 10,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 3,
+                  backdropFilter: 'blur(8px)',
+                  borderRadius: 1,
+                  border: '1px solid rgba(0, 243, 255, 0.2)'
+                }}>
+                  <Box sx={{ position: 'relative' }}>
+                    <CircularProgress size={60} thickness={2} sx={{ color: '#00f3ff' }} />
+                    <Bot size={24} color="#00f3ff" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }} />
+                  </Box>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography sx={{ color: '#fff', fontFamily: 'Orbitron', fontWeight: 900, letterSpacing: 2, fontSize: '0.8rem', mb: 1 }}>
+                      ASSESSING IMPACT
+                    </Typography>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', fontWeight: 600 }}>
+                      AI is analyzing the attack path and calculating risk...
+                    </Typography>
+                  </Box>
+                  <Stack direction="row" spacing={1}>
+                    <Box className="scanning-dot" sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: '#00f3ff', animation: 'pulse 1.5s infinite 0s' }} />
+                    <Box className="scanning-dot" sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: '#00f3ff', animation: 'pulse 1.5s infinite 0.2s' }} />
+                    <Box className="scanning-dot" sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: '#00f3ff', animation: 'pulse 1.5s infinite 0.4s' }} />
+                  </Stack>
+                </Box>
+              )}
+
               {isAssessmentLoading ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4, gap: 2 }}>
                   <CircularProgress size={24} sx={{ color: '#00f3ff' }} />
