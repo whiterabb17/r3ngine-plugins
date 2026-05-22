@@ -1,0 +1,12 @@
+- fields:
+    default_engine: true
+    engine_name: Exploit Readiness Scan
+    yaml_configuration: "subdomain_discovery: {\n  
+      'uses_tools': ['subfinder', 'chaos'],\n  
+      'threads': 30\n}\nhttp_crawl: {}\nvulnerability_scan: {\n  
+      'run_nuclei': true,\n  'run_dalfox': true,\n  
+      'severities': ['high', 'critical']\n}\nerl: {\n  
+      'enabled': true,\n  'use_tools': ['sqlmap', 'XSStrike'],\n  
+      'confidence_threshold': 0.5\n}\nbrute_force_scan: {\n  
+      'services': ['ssh', 'ftp', 'http']\n}"
+  model: scanEngine.enginetype

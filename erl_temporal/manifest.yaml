@@ -1,0 +1,12 @@
+name: "ERL Temporal"
+version: "1.0.0"
+description: "Validated vulnerability confirmation using sandboxed tools. Ported to Temporal workflow."
+temporal:
+  workflows:
+    - "backend.temporal_exports.ERLTemporalWorkflow"
+  activities:
+    - "backend.temporal_exports.run_erl_activity"
+ui:
+  overrides:
+    - name: "VulnerabilityTable"
+      file: "VulnerabilityTable.js"
