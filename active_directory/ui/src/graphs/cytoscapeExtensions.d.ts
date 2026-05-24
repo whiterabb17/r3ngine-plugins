@@ -1,3 +1,5 @@
+import cytoscape from 'cytoscape';
+
 declare module 'cytoscape-dagre' {
   const ext: cytoscape.Ext;
   export default ext;

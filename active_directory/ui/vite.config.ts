@@ -18,6 +18,7 @@ export default defineConfig({
         '@mui/material/styles',
         '@mui/icons-material',
         'lucide-react',
+        'cytoscape',
       ],
       output: {
         globals: {
