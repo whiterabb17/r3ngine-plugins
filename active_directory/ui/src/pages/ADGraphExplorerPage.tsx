@@ -128,7 +128,7 @@ export function ADGraphExplorerPage({ assessmentId }: Props) {
 
       <GraphToolbar
         layout={graphLayout}
-        onLayoutChange={(l) => { saveViewport(cyRef.current!); setGraphLayout(l); }}
+        onLayoutChange={(l) => { if (cyRef.current) saveViewport(cyRef.current); setGraphLayout(l); }}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         focusMode={focusMode}
