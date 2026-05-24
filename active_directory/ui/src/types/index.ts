@@ -54,3 +54,5 @@ export interface WSMessage {
   type: 'phase_started' | 'phase_completed' | 'activity_complete' | 'error';
   payload: Record<string, unknown>;
 }
+
+export type LayoutName = 'dagre' | 'fcose' | 'circle' | 'concentric' | 'grid';
