@@ -109,7 +109,7 @@ class BloodHoundParser:
                     'fqdn': props.get('name', ''),
                     'name': props.get('name', '').split('.')[0],
                     'sid': props.get('objectid', ''),
-                    'forest_root': props.get('isdeleted', False) is False,
+                    'forest_root': props.get('isforestroot', props.get('isroot', False)),
                     'functional_level': str(props.get('functionallevel', '')),
                     'trusts': entry.get('Trusts', []),
                 })
@@ -174,8 +174,8 @@ class BloodHoundParser:
                                     mgr.create_membership_relationship(
                                         member['sid'], label,
                                         group['sid'], assessment_id)
-                                except Exception:
-                                    pass
+                                except Exception as exc:
+                                    logger.warning(f"[BH] Membership edge skipped (sid={member['sid']}): {exc}")
                 for computer in parsed.get('computers', []):
                     mgr.upsert_computer({**computer, 'assessment_id': assessment_id})
         except Exception as exc:
