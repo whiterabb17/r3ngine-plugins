@@ -146,6 +146,48 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=True, methods=['get'], url_path='graph/domains')
+    def graph_domains(self, request, pk=None):
+        """Cytoscape-compatible domain + trust graph."""
+        assessment = self.get_object()
+        try:
+            from .graph.manager import ADGraphManager
+            with ADGraphManager() as mgr:
+                data = mgr.get_domain_graph(assessment.id)
+            return Response(data)
+        except Exception as exc:
+            return Response({'nodes': [], 'edges': [], 'error': str(exc)})
+
+    @action(detail=True, methods=['get'], url_path='graph/exposures')
+    def graph_exposures(self, request, pk=None):
+        """Cytoscape-compatible exposure path graph."""
+        assessment = self.get_object()
+        try:
+            from .graph.manager import ADGraphManager
+            with ADGraphManager() as mgr:
+                data = mgr.get_exposure_paths(assessment.id)
+            return Response(data)
+        except Exception as exc:
+            return Response({'nodes': [], 'edges': [], 'error': str(exc)})
+
+    @action(detail=True, methods=['get'], url_path='graph/path')
+    def graph_path(self, request, pk=None):
+        """Shortest path between two AD domain nodes."""
+        assessment = self.get_object()
+        source = request.query_params.get('source')
+        target = request.query_params.get('target')
+        if not source or not target:
+            return Response(
+                {'error': 'source and target query params required'},
+                status=status.HTTP_400_BAD_REQUEST)
+        try:
+            from .graph.manager import ADGraphManager
+            with ADGraphManager() as mgr:
+                path = mgr.find_shortest_path(source, target, assessment.id)
+            return Response({'path': path})
+        except Exception as exc:
+            return Response({'path': [], 'error': str(exc)})
+
     @action(detail=True, methods=['post'], url_path='ingest',
             parser_classes=[MultiPartParser])
     def ingest(self, request, pk=None):
