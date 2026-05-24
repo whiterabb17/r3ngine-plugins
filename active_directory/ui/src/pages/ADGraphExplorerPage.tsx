@@ -1,61 +1,170 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import CytoscapeComponent from 'react-cytoscapejs';
-import { Box, Typography, CircularProgress, Alert } from '@mui/material';
+import type cytoscape from 'cytoscape';
+import { Box, Typography, Alert, CircularProgress } from '@mui/material';
 import { useDomainGraph } from '../api/adApi';
 import { useADStore } from '../store/adStore';
-import { GraphControlBar } from '../components/GraphControlBar';
-
-const CYTOSCAPE_STYLE = [
-  { selector: 'node', style: { label: 'data(label)', 'background-color': '#0d47a1', color: '#fff', 'font-size': 10, 'text-valign': 'center', 'text-halign': 'center' } },
-  { selector: 'node[type="domain"]', style: { 'background-color': '#00f3ff', color: '#000', shape: 'hexagon' } },
-  { selector: 'node[type="user"]', style: { 'background-color': '#7c4dff', shape: 'ellipse' } },
-  { selector: 'node[type="group"]', style: { 'background-color': '#ff6d00', shape: 'rectangle' } },
-  { selector: 'node[type="computer"]', style: { 'background-color': '#00c853', shape: 'round-rectangle' } },
-  { selector: 'edge', style: { 'line-color': 'rgba(255,255,255,0.2)', 'target-arrow-color': 'rgba(255,255,255,0.4)', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', 'font-size': 9, label: 'data(label)', color: 'rgba(255,255,255,0.5)' } },
-];
+import { CYTOSCAPE_STYLESHEET } from '../graphs/cytoscapeStyles';
+import { LAYOUT_CONFIGS } from '../graphs/cytoscapeLayouts';
+import { useGraphSearch } from '../graphs/useGraphSearch';
+import { useGraphFocus } from '../graphs/useGraphFocus';
+import { useGraphViewport } from '../graphs/useGraphViewport';
+import { GraphToolbar } from '../components/GraphToolbar';
+import { GraphNodePanel } from '../components/GraphNodePanel';
+import { GraphLegend } from '../components/GraphLegend';
 
 interface Props {
   assessmentId: number;
 }
 
 export function ADGraphExplorerPage({ assessmentId }: Props) {
-  const { data, isLoading, error } = useDomainGraph(assessmentId);
-  const { graphLayout, setSelectedNode } = useADStore();
+  const { data, isLoading, error, dataUpdatedAt } = useDomainGraph(assessmentId);
+  const {
+    graphLayout, setGraphLayout,
+    selectedNodeId, selectedNodeData, setSelectedNode,
+    focusMode, setFocusMode,
+    searchQuery, setSearchQuery,
+  } = useADStore();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleNodeTap = useCallback((event: any) => {
-    setSelectedNode(event.target.id() as string);
-  }, [setSelectedNode]);
+  const cyRef = useRef<cytoscape.Core | null>(null);
+  const { saveViewport, restoreViewport, clearViewport } = useGraphViewport();
+  const matchingNodeIds = useGraphSearch(data, searchQuery);
+  const connectedNodeIds = useGraphFocus(selectedNodeId, data, focusMode);
 
-  if (isLoading) return <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}><CircularProgress /></Box>;
-  if (error) return <Alert severity="error">Failed to load graph</Alert>;
+  // Apply search highlight classes when matchingNodeIds changes
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.nodes().removeClass('searched');
+    if (matchingNodeIds.size > 0) {
+      matchingNodeIds.forEach((id) => cy.getElementById(id).addClass('searched'));
+      const first = cy.getElementById([...matchingNodeIds][0]);
+      if (first.length > 0) {
+        cy.animate({ center: { eles: first }, duration: 300 } as Parameters<typeof cy.animate>[0]);
+      }
+    }
+  }, [matchingNodeIds]);
 
-  const elements = [
-    ...(data?.nodes ?? []),
-    ...(data?.edges ?? []),
-  ];
+  // Apply focus / dim classes when selection or focusMode changes
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.nodes().removeClass('highlighted dimmed');
+    cy.edges().removeClass('dimmed');
+    if (!focusMode || !connectedNodeIds) return;
+    cy.nodes().addClass('dimmed');
+    cy.edges().addClass('dimmed');
+    connectedNodeIds.forEach((id) => {
+      cy.getElementById(id).addClass('highlighted').removeClass('dimmed');
+    });
+    cy.edges().filter((e) => {
+      const src = e.source().id();
+      const tgt = e.target().id();
+      return connectedNodeIds.has(src) && connectedNodeIds.has(tgt);
+    }).removeClass('dimmed');
+  }, [connectedNodeIds, focusMode]);
 
+  // Restore viewport after data refresh
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy || !dataUpdatedAt) return;
+    const tid = setTimeout(() => restoreViewport(cy), 600);
+    return () => clearTimeout(tid);
+  }, [dataUpdatedAt, restoreViewport]);
+
+  const handleCyReady = useCallback((cy: cytoscape.Core) => {
+    cyRef.current = cy;
+    cy.on('viewport', () => saveViewport(cy));
+    cy.on('tap', 'node', (event) => {
+      const nodeData = event.target.data() as Record<string, unknown>;
+      setSelectedNode(String(nodeData['id'] ?? ''), nodeData);
+    });
+    cy.on('tap', (event) => {
+      if (event.target === cy) setSelectedNode(null, null);
+    });
+  }, [saveViewport, setSelectedNode]);
+
+  const handleFitGraph = useCallback(() => {
+    clearViewport();
+    cyRef.current?.fit(undefined, 40);
+  }, [clearViewport]);
+
+  const handleExportPng = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const png = cy.png({ full: true, scale: 2, bg: '#0a0a14' });
+    const a = document.createElement('a');
+    a.href = png;
+    a.download = `ad-graph-${assessmentId}-${Date.now()}.png`;
+    a.click();
+  }, [assessmentId]);
+
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+  if (error) return <Alert severity="error">Failed to load graph data</Alert>;
+
+  const elements = [...(data?.nodes ?? []), ...(data?.edges ?? [])];
   if (elements.length === 0) {
     return (
       <Box>
         <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 2 }}>DOMAIN GRAPH</Typography>
-        <Alert severity="info">No graph data yet. Run an assessment or ingest data to populate the graph.</Alert>
+        <Alert severity="info">
+          No graph data yet. Run an assessment or ingest BloodHound / LDAP data to populate the graph.
+        </Alert>
       </Box>
     );
   }
 
   return (
-    <Box>
-      <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 1 }}>DOMAIN GRAPH</Typography>
-      <GraphControlBar />
-      <Box sx={{ height: 600, bgcolor: 'rgba(0,0,0,0.3)', borderRadius: 1, border: '1px solid rgba(255,255,255,0.1)' }}>
-        <CytoscapeComponent
-          elements={elements}
-          style={{ width: '100%', height: '100%' }}
-          stylesheet={CYTOSCAPE_STYLE}
-          layout={{ name: graphLayout }}
-          cy={(cy) => { cy.on('tap', 'node', handleNodeTap); }}
-        />
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 1, letterSpacing: 2 }}>
+        DOMAIN GRAPH
+      </Typography>
+
+      <GraphToolbar
+        layout={graphLayout}
+        onLayoutChange={(l) => { saveViewport(cyRef.current!); setGraphLayout(l); }}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        focusMode={focusMode}
+        onFocusModeToggle={() => setFocusMode(!focusMode)}
+        onFitGraph={handleFitGraph}
+        onExportPng={handleExportPng}
+      />
+
+      <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
+        <Box
+          sx={{
+            flex: 1,
+            position: 'relative',
+            bgcolor: 'rgba(0,0,0,0.35)',
+            borderRadius: selectedNodeData ? '4px 0 0 4px' : 1,
+            border: '1px solid rgba(255,255,255,0.08)',
+            minHeight: 560,
+          }}
+        >
+          <CytoscapeComponent
+            elements={elements}
+            style={{ width: '100%', height: '100%' }}
+            stylesheet={CYTOSCAPE_STYLESHEET}
+            layout={LAYOUT_CONFIGS[graphLayout]}
+            cy={handleCyReady}
+            wheelSensitivity={0.2}
+          />
+          <GraphLegend />
+        </Box>
+
+        {selectedNodeData && (
+          <GraphNodePanel
+            nodeData={selectedNodeData}
+            onClose={() => setSelectedNode(null, null)}
+          />
+        )}
       </Box>
     </Box>
   );
