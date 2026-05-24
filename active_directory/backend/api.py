@@ -162,6 +162,7 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
         ingest_type = request.data.get('type', 'auto')
 
         import tempfile
+        tmp_path = None
         with tempfile.NamedTemporaryFile(
                 delete=False, suffix=os.path.splitext(uploaded.name)[1]) as tmp:
             for chunk in uploaded.chunks():
@@ -175,7 +176,7 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
             summary = {'error': str(exc)}
         finally:
             import os as _os
-            if _os.path.exists(tmp_path):
+            if tmp_path and _os.path.exists(tmp_path):
                 _os.remove(tmp_path)
 
         return Response({
@@ -197,6 +198,9 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
             extract_dir = tempfile.mkdtemp()
             try:
                 with zipfile.ZipFile(file_path, 'r') as zf:
+                    for member in zf.infolist():
+                        if os.path.isabs(member.filename) or '..' in member.filename.split('/'):
+                            raise ValueError(f"Unsafe path in zip archive: {member.filename}")
                     zf.extractall(extract_dir)
                 return ADAssessmentViewSet._run_ingestion(
                     ingest_type, extract_dir, assessment_id)
