@@ -26,6 +26,13 @@ class ADGraphManager:
         except Exception:
             pass
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
+
     # ------------------------------------------------------------------
     # Schema management
     # ------------------------------------------------------------------
@@ -126,12 +133,12 @@ class ADGraphManager:
             result = session.run(
                 f"""
                 MERGE (n:{s.ADFindingNode} {{
-                    title: $title, assessment_id: $assessment_id
+                    finding_id: $finding_id, assessment_id: $assessment_id
                 }})
                 SET n += $props
                 RETURN id(n) AS node_id
                 """,
-                title=props['title'],
+                finding_id=props['finding_id'],
                 assessment_id=props['assessment_id'],
                 props=props,
             )
@@ -160,10 +167,14 @@ class ADGraphManager:
                 props=props or {},
             )
 
+    ALLOWED_MEMBER_LABELS = {s.ADUserNode, s.ADComputerNode, s.ADGroupNode}
+
     def create_membership_relationship(
             self, member_sid: str, member_label: str,
             group_sid: str, assessment_id: int) -> None:
         """Create AD_MEMBER_OF from a user/computer to a group."""
+        if member_label not in self.ALLOWED_MEMBER_LABELS:
+            raise ValueError(f"Invalid member_label: {member_label!r}")
         with self._driver.session() as session:
             session.run(
                 f"""
