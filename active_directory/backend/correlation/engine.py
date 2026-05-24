@@ -99,10 +99,14 @@ class ExposureCorrelationEngine:
     @classmethod
     def resolve_ip(cls, hostname: str) -> Optional[str]:
         """Attempt to resolve a hostname to an IP address."""
+        old_timeout = socket.getdefaulttimeout()
         try:
+            socket.setdefaulttimeout(2.0)
             return socket.gethostbyname(hostname)
-        except (socket.gaierror, socket.herror):
+        except (socket.gaierror, socket.herror, socket.timeout):
             return None
+        finally:
+            socket.setdefaulttimeout(old_timeout)
 
     @classmethod
     def run_full_correlation(
@@ -144,8 +148,8 @@ class ExposureCorrelationEngine:
             exposure, created = ADExposure.objects.update_or_create(
                 assessment=assessment,
                 hostname=hostname,
-                exposure_type=etype,
                 defaults={
+                    'exposure_type': etype,
                     'ip_address': ip,
                     'correlated_domain': correlated_domain,
                     'risk_score': score,
