@@ -30,7 +30,8 @@ class ADTrustSerializer(serializers.ModelSerializer):
 
 class ADExposureSerializer(serializers.ModelSerializer):
     correlated_domain_fqdn = serializers.CharField(
-        source='correlated_domain.fqdn', read_only=True, allow_null=True)
+        source='correlated_domain.fqdn', read_only=True,
+        allow_null=True, required=False)
 
     class Meta:
         model = ADExposure
