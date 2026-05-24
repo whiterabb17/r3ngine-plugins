@@ -74,7 +74,7 @@ class LDAPParser:
                     or name.lower() in _ADMIN_GROUP_NAMES
                 )
                 results.append({
-                    'name': name,
+                    'name': cls._attr(entry, 'cn', name),
                     'sam_account_name': name,
                     'sid': sid,
                     'admin_group': is_admin,
