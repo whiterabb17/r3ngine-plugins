@@ -368,6 +368,33 @@ def finalize_assessment_activity(params: dict) -> dict:
     return {'final_status': status}
 
 
+@activity.defn
+def run_ingestion_activity(params: dict) -> dict:
+    """
+    Process a previously uploaded ingestion file and sync results to Neo4j.
+    Called when files are uploaded via the /ingest/ endpoint.
+    """
+    assessment_id = params['assessment_id']
+    file_path = params['file_path']
+    ingest_type = params.get('ingest_type', 'auto')
+
+    _send_ws_update(assessment_id, 'phase_started', {
+        'phase': 'data_ingestion',
+        'message': f'Processing {ingest_type} data file',
+    })
+
+    from .api import ADAssessmentViewSet
+    summary = ADAssessmentViewSet._run_ingestion(ingest_type, file_path, assessment_id)
+
+    _send_ws_update(assessment_id, 'phase_completed', {
+        'phase': 'data_ingestion',
+        'summary': summary,
+        'message': 'Data ingestion complete',
+    })
+
+    return summary
+
+
 # ---------------------------------------------------------------------------
 # Workflow
 # ---------------------------------------------------------------------------

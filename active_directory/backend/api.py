@@ -168,10 +168,58 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
                 tmp.write(chunk)
             tmp_path = tmp.name
 
+        try:
+            summary = ADAssessmentViewSet._run_ingestion(ingest_type, tmp_path, assessment.id)
+        except Exception as exc:
+            logger.error(f"[AD Ingest] Failed: {exc}")
+            summary = {'error': str(exc)}
+        finally:
+            import os as _os
+            if _os.path.exists(tmp_path):
+                _os.remove(tmp_path)
+
         return Response({
-            'status': 'queued',
+            'status': 'completed',
             'file': uploaded.name,
             'type': ingest_type,
-            'tmp_path': tmp_path,
-            'message': 'File received. Ingestion pipeline runs in Phase 2.',
+            'summary': summary,
         })
+
+    @staticmethod
+    def _run_ingestion(ingest_type: str, file_path: str, assessment_id: int) -> dict:
+        import zipfile
+        import tempfile
+        import shutil
+
+        ingest_type = ingest_type.lower()
+
+        if file_path.endswith('.zip'):
+            extract_dir = tempfile.mkdtemp()
+            try:
+                with zipfile.ZipFile(file_path, 'r') as zf:
+                    zf.extractall(extract_dir)
+                return ADAssessmentViewSet._run_ingestion(
+                    ingest_type, extract_dir, assessment_id)
+            finally:
+                shutil.rmtree(extract_dir, ignore_errors=True)
+
+        if os.path.isdir(file_path):
+            files = os.listdir(file_path)
+            if any(f in files for f in
+                   ['domain_users.json', 'domain_groups.json', 'domain_computers.json']):
+                ingest_type = 'ldap'
+            elif any(f in files for f in
+                     ['users.json', 'groups.json', 'computers.json']):
+                ingest_type = 'bloodhound'
+
+        if ingest_type in ('ldap', 'ldapdomaindump'):
+            from .ingestion.ldap_parser import LDAPParser
+            directory = file_path if os.path.isdir(file_path) else os.path.dirname(file_path)
+            return LDAPParser.ingest_from_directory(directory, assessment_id)
+
+        if ingest_type in ('bloodhound', 'bh'):
+            from .ingestion.bloodhound_parser import BloodHoundParser
+            directory = file_path if os.path.isdir(file_path) else os.path.dirname(file_path)
+            return BloodHoundParser.ingest_from_directory(directory, assessment_id)
+
+        return {'warning': f'Unknown ingest type: {ingest_type}. Supported: ldap, bloodhound'}

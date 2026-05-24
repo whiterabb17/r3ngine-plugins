@@ -18,6 +18,7 @@ temporal:
     - "backend.temporal_exports.run_exposure_correlation_activity"
     - "backend.temporal_exports.run_neo4j_sync_activity"
     - "backend.temporal_exports.finalize_assessment_activity"
+    - "backend.temporal_exports.run_ingestion_activity"
 
 ui:
   menu_item: "AD Intelligence"
