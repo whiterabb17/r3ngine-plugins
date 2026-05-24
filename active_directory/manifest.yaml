@@ -1,0 +1,25 @@
+name: "Active Directory Intelligence"
+description: "Enterprise AD assessment, identity intelligence, and exposure management plugin for contracted penetration testing and consulting engagements."
+version: "1.0.0"
+
+# "standalone" ensures this plugin never injects into the main scan pipeline.
+# The PluginOrchestrator only calls plugins whose anchor_step matches a real scan task.
+runtime:
+  run after: "standalone"
+
+temporal:
+  workflows:
+    - "backend.temporal_exports.ADAssessmentWorkflow"
+  activities:
+    - "backend.temporal_exports.initialize_assessment_activity"
+    - "backend.temporal_exports.run_dns_discovery_activity"
+    - "backend.temporal_exports.run_cert_discovery_activity"
+    - "backend.temporal_exports.run_trust_analysis_activity"
+    - "backend.temporal_exports.run_exposure_correlation_activity"
+    - "backend.temporal_exports.run_neo4j_sync_activity"
+    - "backend.temporal_exports.finalize_assessment_activity"
+
+ui:
+  menu_item: "AD Intelligence"
+  menu_path: "/active-directory"
+  components: []
