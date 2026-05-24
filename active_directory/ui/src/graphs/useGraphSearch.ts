@@ -13,7 +13,8 @@ export function useGraphSearch(
         .filter((n) =>
           String(n.data['label'] ?? n.data['id'] ?? '').toLowerCase().includes(q)
         )
-        .map((n) => String(n.data['id']))
+        .filter((n) => typeof n.data['id'] === 'string' && n.data['id'].length > 0)
+        .map((n) => n.data['id'] as string)
     );
   }, [searchQuery, elements]);
 }
