@@ -1,145 +1,443 @@
 # reNgine v3 Plugin Development Guide
 
-reNgine v3 introduces a modular, stealth-focused plugin architecture. This allows developers to extend the platform's reconnaissance and validation capabilities without modifying the core codebase.
+reNgine v3 introduces a modular plugin architecture that lets developers extend the platform's capabilities without modifying the core codebase. Plugins can add backend pipelines, Temporal workflows, and full UI pages.
 
-## 📁 Plugin Anatomy
+---
 
-A reNgine plugin is a ZIP archive containing a specific folder structure and configuration files:
+## Plugin Anatomy
+
+A reNgine plugin is a directory (packaged as a ZIP for distribution) with the following structure:
 
 ```text
-my-awesome-plugin/
-├── manifest.yaml           # Core identity and sequencing
-├── tools.yaml              # (Optional) Binary tool dependencies
-├── my_engine.yaml          # (Optional) Engine Type fixtures
-├── backend/                # Backend logic (Celery tasks, logic)
-│   ├── tasks.py            # Main entry point for Celery
-│   └── ...
-├── ui/                     # (Optional) Frontend components
-│   ├── MyComponent.js      # React component (ESM)
-│   └── VulnerabilityTable.js # (Optional) Override for core UI
-└── resources/                # (Optional) Any other resources for the plugin
+my-plugin/
+├── manifest.yaml           # Required — identity, pipeline hooks, UI config
+├── tools.yaml              # Optional — binary tool dependencies
+├── my_engine.yaml          # Optional — Django fixture for engine templates
+├── backend/                # Optional — Django app (models, API, Temporal workflows)
+│   ├── __init__.py
+│   ├── models.py
+│   ├── api.py
+│   ├── api_urls.py         # Registers routes at /api/plugins/{slug}/
+│   ├── serializers.py
+│   ├── migrations/
+│   └── temporal_exports.py # Temporal workflow + activity definitions
+└── ui/                     # Optional — frontend UI source (Vite lib build)
+    ├── package.json
+    ├── vite.config.ts
+    ├── tsconfig.json
+    └── src/
+        ├── index.ts        # Barrel — named exports of all page components
+        ├── api/            # TanStack Query hooks
+        ├── store/          # Zustand state
+        ├── hooks/          # Custom React hooks (WebSocket, etc.)
+        ├── components/     # Shared UI components
+        └── pages/          # Full page components
 ```
 
 ---
 
-## 📄 The Manifest (`manifest.yaml`)
+## The Manifest (`manifest.yaml`)
 
-The `manifest.yaml` is the source of truth for your plugin. It defines the identity, where it attaches to the scan pipeline, and UI configuration.
+`manifest.yaml` is the source of truth for your plugin.
 
 ```yaml
-name: "Exploit Readiness Layer"
+slug: "my_plugin"
+name: "My Plugin"
 version: "1.0.0"
-description: "Validated vulnerability confirmation using sandboxed tools."
+description: "What this plugin does."
+author: "Your Name"
+
 runtime:
-  run after: "VulnerabilityScan"  # Sequencing: Before or After a core step
+  run_after: "VulnerabilityScan"   # Core scan step to run after
+
+temporal:
+  activities:
+    - "backend.temporal_exports.my_activity"
+    - "backend.temporal_exports.another_activity"
+
 ui:
-  components:
-    - name: "ERL Summary"
-      type: "TargetDashboard"     # Slot name to inject into
-      file: "ERLSummary.js"
-  overrides:
-    - name: "VulnerabilityTable"  # Core component name to override
-      file: "VulnerabilityTable.js"
+  menu_item: "My Plugin"           # Label in the "Plugins" nav group
+  menu_path: "/my-plugin"          # Sub-path under /{projectSlug}/
 ```
 
 ### Sequencing Anchors
-Plugins can attach to the following core steps:
-- `SubdomainDiscovery`
-- `PortScan`
-- `FetchURL`
-- `VulnerabilityScan`
-- `Reporting`
+
+```
+SubdomainDiscovery | PortScan | FetchURL | VulnerabilityScan | Reporting
+```
 
 ---
 
-## 🛠️ Tool Dependencies (`tools.yaml`)
+## Backend Development
 
-If your plugin requires external binaries (like `sqlmap` or `XSStrike`), define them in `tools.yaml`. reNgine will automatically handle their installation and health checks in the background.
+### Django App
+
+A plugin backend is a standard Django app installed into `plugins_data/{slug}/backend/` at install time. The dynamic URL loader in `api/urls.py` auto-discovers `backend/api_urls.py` and mounts it at `/api/plugins/{slug}/`.
+
+```python
+# backend/api_urls.py
+from django.urls import path
+from rest_framework import routers
+from .api import MyViewSet
+
+router = routers.DefaultRouter()
+router.register(r'items', MyViewSet, basename='items')
+urlpatterns = router.urls
+```
+
+### Temporal Workflows
+
+Define activities in `backend/temporal_exports.py` and list them in `manifest.yaml temporal.activities`. The Temporal orchestrator discovers and registers them on startup.
+
+```python
+# backend/temporal_exports.py
+from temporalio import activity
+
+@activity.defn(name="my_plugin_activity")
+async def my_activity(params: dict) -> dict:
+    ...
+    return {"status": "done"}
+```
+
+---
+
+## UI Development — Two Patterns
+
+There are two ways to add UI from a plugin:
+
+| Pattern | Use case | Example |
+|---------|----------|---------|
+| **Component override** | Replace an existing core component | `exploit-readiness-layer` overrides `VulnerabilityTable` |
+| **New pages** | Add entirely new pages with nav link | `active_directory` adds AD Intelligence pages |
+
+Both patterns use the same Vite lib build. The difference is how the host integrates the output.
+
+---
+
+## Pattern 1: Component Overrides (ERL Style)
+
+Use this when you want to replace an existing component in the core UI.
+
+### `manifest.yaml`
+
+```yaml
+ui:
+  overrides:
+    - name: "VulnerabilityTable"
+      file: "VulnerabilityTable.js"
+```
+
+### `vite.config.ts`
+
+```typescript
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    lib: {
+      entry: 'src/VulnerabilityTable.tsx',
+      name: 'VulnerabilityTable',
+      fileName: 'VulnerabilityTable',
+      formats: ['es'],
+    },
+    rollupOptions: {
+      external: ['react', 'react-dom', '@mui/material', 'lucide-react'],
+    },
+    outDir: 'dist',
+  },
+});
+```
+
+The built file (`dist/VulnerabilityTable.js`) must have a **default export** — the host's `PluginComponentLoader` uses `module.default`.
+
+---
+
+## Pattern 2: New Pages (PluginPageLoader Style)
+
+Use this when your plugin adds entirely new pages that need their own routes.
+
+### Step 1: Set up `vite.config.ts` with a barrel entry
+
+```typescript
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    lib: {
+      entry: 'src/index.ts',   // Barrel that exports all page components by name
+      name: 'MyPlugin',
+      fileName: 'index',        // Output: dist/index.js
+      formats: ['es'],
+    },
+    rollupOptions: {
+      // Mark host-provided deps as external (NOT bundled)
+      external: [
+        'react', 'react-dom',
+        '@mui/material', '@mui/material/styles', '@mui/icons-material',
+        'lucide-react',
+      ],
+    },
+    outDir: 'dist',
+    emptyOutDir: true,
+  },
+});
+```
+
+### Step 2: Export all pages from `src/index.ts`
+
+```typescript
+// src/index.ts
+export { MyListPage }   from './pages/MyListPage';
+export { MyDetailPage } from './pages/MyDetailPage';
+```
+
+Each page is a **named export**. The host loads by name via `PluginPageLoader`.
+
+### Step 3: Write page components
+
+Page components receive props passed by the host route. Use `assessmentId`, `projectSlug`, or whatever the route provides.
+
+```typescript
+// src/pages/MyListPage.tsx
+import React from 'react';
+
+interface Props {
+  projectSlug?: string;
+}
+
+export function MyListPage({ projectSlug }: Props) {
+  return <div>My Plugin page for project: {projectSlug}</div>;
+}
+```
+
+### Step 4: Add `manifest.yaml` menu config
+
+```yaml
+ui:
+  menu_item: "My Plugin"        # Nav label shown under "Plugins"
+  menu_path: "/my-plugin"       # Appended to /{projectSlug}/
+```
+
+When the plugin is enabled, the Shell reads `/api/plugins/registry/` and adds a nav link to `/{projectSlug}/my-plugin`.
+
+### Step 5: Add routes in the host `frontend/src/router.tsx`
+
+The host needs routes for each page. Use `PluginPageLoader` from `frontend/src/features/plugins/components/PluginPageLoader.tsx`:
+
+```typescript
+import PluginPageLoader from './features/plugins/components/PluginPageLoader';
+
+// List page route
+const myPluginRoute = createRoute({
+  getParentRoute: () => projectRoute,
+  path: "my-plugin",
+  component: function MyPluginPage() {
+    return (
+      <PluginPageLoader
+        pluginSlug="my_plugin"
+        exportName="MyListPage"
+      />
+    );
+  },
+});
+
+// Detail page with a URL param
+const myPluginDetailRoute = createRoute({
+  getParentRoute: () => projectRoute,
+  path: "my-plugin/$itemId",
+  component: function MyPluginDetailPage() {
+    const { itemId } = useParams({ strict: false });
+    return (
+      <PluginPageLoader
+        pluginSlug="my_plugin"
+        exportName="MyDetailPage"
+        itemId={Number(itemId)}
+      />
+    );
+  },
+});
+```
+
+Add the routes to the `routeTree`:
+
+```typescript
+const routeTree = rootRoute.addChildren([
+  rootRedirectRoute,
+  projectRoute.addChildren([
+    // ... existing routes ...
+    myPluginRoute,
+    myPluginDetailRoute,
+  ]),
+  // ...
+]);
+```
+
+---
+
+## PluginPageLoader Reference
+
+`PluginPageLoader` is a host-side React component that dynamically loads a named export from a plugin's built ES module.
+
+```typescript
+// frontend/src/features/plugins/components/PluginPageLoader.tsx
+
+interface Props {
+  pluginSlug: string;   // e.g. "active_directory"
+  exportName: string;   // Named export from dist/index.js, e.g. "ADAssessmentsPage"
+  [key: string]: unknown;  // Additional props forwarded to the loaded component
+}
+```
+
+**How it works:**
+
+1. On mount, it `import()`-s `/media/plugins/{slug}/ui/index.js` (a cache-busted dynamic import)
+2. It looks up `module[exportName]` — the named export
+3. If found and it's a function, it renders it with all extra props forwarded
+4. Shows a `CircularProgress` spinner while loading
+5. Shows an error message if the module fails to load or the export is not found
+
+**The plugin is served from `MEDIA_ROOT`** — it must be installed and synced first:
+
+```bash
+# Install plugin (copies to web/plugins_data/{slug}/)
+# Then sync UI to MEDIA_ROOT:
+docker exec r3ngine-web-1 python manage.py sync_plugin_ui
+```
+
+---
+
+## Build Pipeline
+
+```
+Source: r3ngine-plugins/{slug}/ui/src/
+         ↓
+Build:   npm run build  (or build_plugins.py)
+         ↓
+Output:  r3ngine-plugins/{slug}/ui/dist/index.js
+         ↓
+Package: build_plugins.py  →  dist/{slug}.zip  (includes ui/dist/ as ui/)
+         ↓
+Install: AtomicInstaller  →  web/plugins_data/{slug}/ui/
+         ↓
+Sync:    sync_plugin_ui  →  MEDIA_ROOT/plugins/{slug}/ui/
+         ↓
+Served:  /media/plugins/{slug}/ui/index.js
+```
+
+### Building with `build_plugins.py`
+
+```bash
+# Build and package a single plugin
+cd r3ngine-plugins
+python build_plugins.py active_directory
+
+# Build all plugins
+python build_plugins.py
+```
+
+### Building the UI directly (for development)
+
+```bash
+cd r3ngine-plugins/active_directory/ui
+npm install
+npm run build
+```
+
+---
+
+## Full Example: Active Directory Intelligence Plugin
+
+The `active_directory` plugin is the reference implementation of the new-pages pattern.
+
+**Backend:** Django app with models (`ADAssessment`, `ADFinding`, `ADTrust`, `ADExposure`), REST API at `/api/plugins/active_directory/`, Temporal workflow with 8 activities, Neo4j graph manager.
+
+**Frontend pages (exported from `ui/src/index.ts`):**
+
+| Export name | Route | Description |
+|-------------|-------|-------------|
+| `ADAssessmentsPage` | `/{slug}/active-directory` | Assessment list with create/start actions |
+| `ADAssessmentDetailPage` | `/{slug}/active-directory/assessment/$id` | Findings, trusts, exposures tabs + ingest |
+| `ADGraphExplorerPage` | `/{slug}/active-directory/assessment/$id/graph` | Interactive Cytoscape domain graph |
+| `ADTrustAnalyticsPage` | `/{slug}/active-directory/assessment/$id/trusts` | Trust relationship table |
+| `ADExposureDashboardPage` | `/{slug}/active-directory/assessment/$id/exposures` | Risk-scored exposure surface |
+
+**Key dependencies bundled into `dist/index.js`:**
+- `cytoscape` + `react-cytoscapejs` (graph visualization)
+- `zustand` (UI state)
+- `@tanstack/react-query` (data fetching)
+
+**Peer dependencies provided by host (NOT bundled):**
+- `react`, `react-dom`
+- `@mui/material`, `@mui/icons-material`
+- `lucide-react`
+
+---
+
+## `package.json` Guidelines
+
+```json
+{
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "@mui/material": "^6.0.0",
+    "@mui/icons-material": "^6.0.0",
+    "lucide-react": "^0.400.0"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.100.9",
+    "zustand": "^5.0.0",
+    "cytoscape": "^3.33.3"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}
+```
+
+- `peerDependencies` → listed in `rollupOptions.external` → provided by host at runtime, not bundled
+- `dependencies` → bundled into `dist/index.js`
+- Do NOT add `react` or `@mui/material` to `dependencies` — the host provides one instance; bundling another causes React hook errors
+
+---
+
+## Development Workflow
+
+1. **Write source locally** — all plugin code lives in `r3ngine-plugins/{slug}/` on your host machine
+2. **Build the UI** — `cd r3ngine-plugins/{slug}/ui && npm run build`
+3. **Sync to container** — `docker cp r3ngine-plugins/{slug} r3ngine-web-1:/usr/src/app/plugins_data/`
+4. **Sync UI to media** — `docker exec r3ngine-web-1 python manage.py sync_plugin_ui`
+5. **Test in browser** — navigate to `/{projectSlug}/my-plugin`
+6. **Commit** — plugin files to `r3ngine-plugins/` repo; host route changes to the main `r3ngine` repo
+
+> Never commit `web/plugins_data/` to any repo — it is runtime install state only.
+
+---
+
+## Tool Dependencies (`tools.yaml`)
 
 ```yaml
 tools:
-  - name: "sqlmap"
-    binary: "sqlmap"
+  - name: "my-tool"
+    binary: "my-tool"
     install_type: "pip3"
-    install_command: "pip3 install sqlmap"
-    validation_command: "sqlmap --version"
-  - name: "XSStrike"
-    binary: "python3 /usr/src/app/plugins_data/exploit-readiness-layer/tools/XSStrike/xsstrike.py"
-    install_type: "git"
-    install_command: "mkdir -p tools && git clone --depth 1 https://github.com/s0md3v/XSStrike.git tools/XSStrike && pip3 install -r tools/XSStrike/requirements.txt"
-    validation_command: "python3 tools/XSStrike/xsstrike.py --version"
+    install_command: "pip3 install my-tool"
+    validation_command: "my-tool --version"
 ```
 
-> [!IMPORTANT]
-> Tools are installed into the `plugins_data/<plugin-slug>/` directory on the worker container. Use relative paths in your tasks.
+Tools are installed into `plugins_data/{slug}/` on the worker container.
 
 ---
 
-## ⚙️ Scan Engine Integration (`*_engine.yaml`)
+## Tips
 
-Plugins can provide custom engine templates. Any file ending in `_engine.yaml` is treated as a Django fixture and ingested upon installation.
-
-### Dedicated `erl` Block
-To keep configurations clean, ERL-related settings should use the dedicated `erl` block:
-
-```yaml
-- fields:
-    engine_name: "Exploit Readiness Scan"
-    yaml_configuration: |
-      subdomain_discovery: { 'uses_tools': ['subfinder'], 'threads': 30 }
-      vulnerability_scan: { 'run_nuclei': true, 'severities': ['high', 'critical'] }
-      erl: {
-        'enabled': true,
-        'use_tools': ['sqlmap', 'XSStrike'],
-        'confidence_threshold': 0.5
-      }
-  model: scanEngine.enginetype
-```
-
----
-
-## 🖥️ Frontend Extensions
-
-reNgine uses a **Slot & Override** system for UI extensibility.
-
-### 1. UI Components (Slots)
-You can inject components into predefined "slots" throughout the dashboard. Core components use `<PluginSlot name="SlotName" />` to render these.
-
-**Common Slots:**
-- `TargetDashboard`
-- `ScanDetailHeader`
-- `VulnerabilityActionMenu`
-
-### 2. UI Overrides
-Overrides allow you to completely replace a core reNgine component with your own. This is useful for custom data visualizations or specialized tables.
-
-**How it works:**
-1. Identify the component name in the reNgine frontend (e.g., `VulnerabilityTable`).
-2. Add the override to your `manifest.yaml`.
-3. Provide an ESM-compatible JavaScript file in your `ui/` folder.
-
-```javascript
-// ui/MyCustomComponent.js
-import React from 'react';
-
-const MyCustomComponent = ({ context }) => {
-  return <div className="tactical-panel">Plugin Content</div>;
-};
-
-export default MyCustomComponent;
-```
-
----
-
-## 🚀 Development Workflow
-
-1. **Develop Local**: Create your plugin folder inside `r3ngine-plugins/`.
-2. **Backend Logic**: Use the `SubprocessExecutor` for executing your plugin tools to ensure they respect reNgine's OpSec and Proxy settings.
-3. **Pack**: `zip -r my-plugin.zip .` (inside your plugin folder).
-4. **Upload**: Use the "Plugin Inventory" page in the reNgine UI to upload and enable your plugin.
-5. **Verify**: Check the worker logs (`docker logs -f rengine-worker`) for tool installation progress.
-
----
-
-> [!TIP]
-> Always check `reNgine.opsec_utils` in the backend for reusable stealth and proxy management utilities when building your adapters.
+- Check `reNgine.opsec_utils` for proxy rotation and stealth utilities
+- Use `_send_ws_update(assessment_id, type, payload)` in Temporal activities to push real-time progress via WebSocket
+- WebSocket endpoint for plugins: `ws[s]://{host}/ws/plugins/{slug}/{assessment_id}/`
+- All data fetching in plugin UI should use `credentials: 'include'` to pass session cookies
