@@ -40,7 +40,8 @@ export const LAYOUT_CONFIGS: Record<LayoutName, any> = {
       if (t === 'ADUser' || t === 'ADGroup' || t === 'ADComputer') return 2;
       return 1;
     },
-    levelWidth: () => 2,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    levelWidth: (nodes: any) => Math.max(1, Math.ceil(nodes.length / 4)),
     padding: 40,
     animate: true,
     animationDuration: 450,
