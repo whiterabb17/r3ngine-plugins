@@ -50,9 +50,60 @@ export interface CytoscapeGraph {
   edges: Array<{ data: Record<string, unknown> }>;
 }
 
-export interface WSMessage {
-  type: 'phase_started' | 'phase_completed' | 'activity_complete' | 'error';
-  payload: Record<string, unknown>;
+export type LayoutName = 'dagre' | 'fcose' | 'circle' | 'concentric' | 'grid';
+
+export type WSEventType =
+  | 'assessment_started'
+  | 'phase_started'
+  | 'phase_completed'
+  | 'activity_complete'
+  | 'workflow_progress'
+  | 'finding_detected'
+  | 'trust_discovered'
+  | 'identity_discovered'
+  | 'graph_updated'
+  | 'correlation_completed'
+  | 'error';
+
+export interface WorkflowProgressPayload {
+  phase: string;
+  progress_pct: number;
+  message: string;
 }
 
-export type LayoutName = 'dagre' | 'fcose' | 'circle' | 'concentric' | 'grid';
+export interface FindingDetectedPayload {
+  finding_id: string;
+  title: string;
+  severity: string;
+  affected_object: string;
+  finding_type: string;
+}
+
+export interface TrustDiscoveredPayload {
+  source_domain: string;
+  target_domain: string;
+  trust_type: string;
+  is_transitive: boolean;
+}
+
+export interface IdentityDiscoveredPayload {
+  entity_type: string;
+  name: string;
+  count?: number;
+}
+
+export interface GraphUpdatedPayload {
+  assessment_id: number;
+  node_count: number;
+  edge_count: number;
+}
+
+export interface CorrelationCompletedPayload {
+  exposure_count: number;
+  high_risk_count: number;
+}
+
+export interface WSMessage {
+  type: WSEventType;
+  payload: Record<string, unknown>;
+}
