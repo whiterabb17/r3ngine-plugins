@@ -250,7 +250,8 @@ class ADGraphManager:
                 for r in edges_result
             ]
             total_nodes = len(nodes)
-            if limit > 0 and len(nodes) > limit:
+            truncated = limit > 0 and total_nodes > limit
+            if truncated:
                 nodes = nodes[:limit]
                 visible_ids = {n['data']['id'] for n in nodes}
                 edges = [
@@ -261,7 +262,7 @@ class ADGraphManager:
             return {
                 'nodes': nodes,
                 'edges': edges,
-                'truncated': total_nodes > limit if limit > 0 else False,
+                'truncated': truncated,
                 'total_nodes': total_nodes,
             }
 

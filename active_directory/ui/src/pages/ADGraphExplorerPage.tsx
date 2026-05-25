@@ -138,7 +138,15 @@ export function ADGraphExplorerPage({ assessmentId }: Props) {
           severity="warning"
           sx={{ mb: 1 }}
           action={
-            <Button color="inherit" size="small" onClick={() => setLoadAll(true)}>
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => {
+                const n = data.total_nodes ?? 0;
+                if (n > 1000 && !window.confirm(`Load all ${n} nodes? This may impact browser performance.`)) return;
+                setLoadAll(true);
+              }}
+            >
               Load All ({data.total_nodes})
             </Button>
           }

@@ -172,8 +172,21 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
     def graph_domains(self, request, pk=None):
         """Cytoscape-compatible domain + trust graph."""
         assessment = self.get_object()
+        raw_limit = request.query_params.get('limit', '300')
         try:
-            limit = int(request.query_params.get('limit', 300))
+            limit = int(raw_limit)
+            if limit < 0:
+                limit = 0
+            elif limit == 0:
+                limit = 5000  # "load all" hard cap — prevents unbounded memory fetch
+            elif limit > 5000:
+                limit = 5000
+        except (ValueError, TypeError):
+            return Response(
+                {'error': 'limit must be a non-negative integer'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
             from .graph.manager import ADGraphManager
             with ADGraphManager() as mgr:
                 data = mgr.get_domain_graph(assessment.id, limit=limit)
