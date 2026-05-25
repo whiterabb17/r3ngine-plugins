@@ -102,10 +102,12 @@ export function useExposures(assessmentId: number) {
   });
 }
 
-export function useDomainGraph(assessmentId: number) {
+export function useDomainGraph(assessmentId: number, loadAll = false) {
   return useQuery({
-    queryKey: ['ad', 'assessments', assessmentId, 'graph', 'domains'],
-    queryFn: () => apiFetch<CytoscapeGraph>(`${API_BASE}/${assessmentId}/graph/domains/`),
+    queryKey: ['ad', 'assessments', assessmentId, 'graph', 'domains', loadAll],
+    queryFn: () => apiFetch<CytoscapeGraph>(
+      `${API_BASE}/${assessmentId}/graph/domains/${loadAll ? '?limit=0' : ''}`
+    ),
     enabled: !!assessmentId,
   });
 }

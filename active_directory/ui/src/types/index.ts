@@ -51,6 +51,8 @@ export interface ADExposure {
 export interface CytoscapeGraph {
   nodes: Array<{ data: Record<string, unknown> }>;
   edges: Array<{ data: Record<string, unknown> }>;
+  truncated?: boolean;
+  total_nodes?: number;
 }
 
 export type LayoutName = 'dagre' | 'fcose' | 'circle' | 'concentric' | 'grid';

@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import CytoscapeComponent from 'react-cytoscapejs';
 import type cytoscape from 'cytoscape';
-import { Box, Typography, Alert, CircularProgress } from '@mui/material';
+import { Box, Typography, Alert, Button, CircularProgress } from '@mui/material';
 import { useDomainGraph } from '../api/adApi';
 import { useADStore } from '../store/adStore';
 import { CYTOSCAPE_STYLESHEET } from '../graphs/cytoscapeStyles';
@@ -19,7 +19,8 @@ interface Props {
 }
 
 export function ADGraphExplorerPage({ assessmentId }: Props) {
-  const { data, isLoading, error, dataUpdatedAt, refetch } = useDomainGraph(assessmentId);
+  const [loadAll, setLoadAll] = useState(false);
+  const { data, isLoading, error, dataUpdatedAt, refetch } = useDomainGraph(assessmentId, loadAll);
   const {
     graphLayout, setGraphLayout,
     selectedNodeId, selectedNodeData, setSelectedNode,
@@ -132,6 +133,19 @@ export function ADGraphExplorerPage({ assessmentId }: Props) {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {data?.truncated && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 1 }}
+          action={
+            <Button color="inherit" size="small" onClick={() => setLoadAll(true)}>
+              Load All ({data.total_nodes})
+            </Button>
+          }
+        >
+          Showing {data.nodes.length} of {data.total_nodes} nodes. Large graphs may impact performance.
+        </Alert>
+      )}
       <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 1, letterSpacing: 2 }}>
         DOMAIN GRAPH
       </Typography>

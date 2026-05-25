@@ -173,9 +173,10 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
         """Cytoscape-compatible domain + trust graph."""
         assessment = self.get_object()
         try:
+            limit = int(request.query_params.get('limit', 300))
             from .graph.manager import ADGraphManager
             with ADGraphManager() as mgr:
-                data = mgr.get_domain_graph(assessment.id)
+                data = mgr.get_domain_graph(assessment.id, limit=limit)
             return Response(data)
         except Exception as exc:
             return Response({'nodes': [], 'edges': [], 'error': str(exc)},

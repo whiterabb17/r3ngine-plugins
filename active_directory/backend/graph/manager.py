@@ -207,8 +207,16 @@ class ADGraphManager:
     # Graph queries
     # ------------------------------------------------------------------
 
-    def get_domain_graph(self, assessment_id: int) -> Dict:
-        """Return all ADDomain nodes and AD_TRUSTS edges for Cytoscape."""
+    def get_domain_graph(self, assessment_id: int, limit: int = 300) -> Dict:
+        """Return ADDomain nodes and AD_TRUSTS edges for Cytoscape.
+
+        Args:
+            assessment_id: The assessment to query.
+            limit: Maximum number of nodes to return.  Pass 0 (or negative) to
+                   return all nodes.  When the result is truncated, edges whose
+                   source or target falls outside the returned node set are
+                   removed automatically.
+        """
         with self._driver.session() as session:
             nodes_result = session.run(
                 f"MATCH (n:{s.ADDomainNode} {{assessment_id: $aid}}) "
@@ -241,7 +249,21 @@ class ADGraphManager:
                           'risk_score': r['risk_score']}}
                 for r in edges_result
             ]
-            return {'nodes': nodes, 'edges': edges}
+            total_nodes = len(nodes)
+            if limit > 0 and len(nodes) > limit:
+                nodes = nodes[:limit]
+                visible_ids = {n['data']['id'] for n in nodes}
+                edges = [
+                    e for e in edges
+                    if e['data']['source'] in visible_ids
+                    and e['data']['target'] in visible_ids
+                ]
+            return {
+                'nodes': nodes,
+                'edges': edges,
+                'truncated': total_nodes > limit if limit > 0 else False,
+                'total_nodes': total_nodes,
+            }
 
     def get_exposure_paths(self, assessment_id: int) -> Dict:
         """Return exposure nodes and their links to identity infrastructure."""
