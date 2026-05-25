@@ -1,7 +1,6 @@
 # r3ngine-plugins/active_directory/backend/reporting/pdf_renderer.py
 from __future__ import annotations
 import html
-from datetime import datetime, date
 
 
 def _esc(value) -> str:
@@ -46,7 +45,7 @@ def _build_html(report: dict) -> str:
         f'<tr><td>{_esc(t.get("source",""))}</td><td>{_esc(t.get("target",""))}</td>'
         f'<td>{_esc(t.get("type",""))}</td><td>{_esc(t.get("direction",""))}</td>'
         f'<td>{"Yes" if t.get("is_transitive") else "No"}</td>'
-        f'<td>{"Enabled" if t.get("is_selective_auth") else "<b style=color:#f44336>Disabled</b>"}</td>'
+        f'<td>{"Enabled" if t.get("is_selective_auth") else "<b style=\"color:#f44336\">Disabled</b>"}</td>'
         f'<td>{t.get("risk_score", 0):.1f}</td></tr>'
         for t in trusts
     )
@@ -60,13 +59,13 @@ def _build_html(report: dict) -> str:
     )
 
     timeline_rows = ''.join(
-        f'<tr><td style="white-space:nowrap;font-size:0.8em">{_esc(e.get("timestamp","")[:19])}</td>'
+        f'<tr><td style="white-space:nowrap;font-size:0.8em">{_esc(str(e.get("timestamp",""))[:19])}</td>'
         f'<td>{_esc(e.get("event_type",""))}</td>'
         f'<td>{_esc(e.get("actor",""))}</td></tr>'
         for e in timeline
     )
 
-    generated_at = meta.get('generated_at', '')[:19]
+    generated_at = str(meta.get('generated_at', ''))[:19]
 
     return f"""<!DOCTYPE html>
 <html>
