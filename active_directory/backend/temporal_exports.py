@@ -15,14 +15,17 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 def _send_ws_update(assessment_id: int, event_type: str, data: dict) -> None:
-    """Write a progress event to the Redis stream for this assessment."""
-    import redis
-    from django.conf import settings
-    r = redis.StrictRedis(
-        host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
-    stream_key = f"ad:assessment:{assessment_id}"
-    payload = json.dumps({'type': event_type, **data})
-    r.xadd(stream_key, {'data': payload}, maxlen=500)
+    """Write a progress event to the Redis stream for this assessment. Non-fatal."""
+    try:
+        import redis
+        from django.conf import settings
+        r = redis.StrictRedis(
+            host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
+        stream_key = f"ad:assessment:{assessment_id}"
+        payload = json.dumps({'type': event_type, **data})
+        r.xadd(stream_key, {'data': payload}, maxlen=500)
+    except Exception as e:
+        logger.warning(f"[AD WS] Failed to emit {event_type} for assessment {assessment_id}: {e}")
 
 
 def _set_assessment_status(assessment_id: int, status: str,
@@ -254,19 +257,19 @@ def run_trust_analysis_activity(params: dict) -> dict:
 
         _send_ws_update(assessment_id, 'trust_discovered', {
             'source_domain': trust.source_domain,
-            'target_domain': trust.target_domain,
+            'target_domain': trust.target_domain_name,
             'trust_type': trust.trust_type,
             'is_transitive': trust.is_transitive,
-            'message': f'Trust discovered: {trust.source_domain} → {trust.target_domain}',
+            'message': f'Trust discovered: {trust.source_domain} → {trust.target_domain_name}',
         })
         if not trust.is_selective_auth:
             _send_ws_update(assessment_id, 'finding_detected', {
                 'finding_id': f'trust_no_sid_filter_{trust.id}',
                 'title': 'Trust without Selective Authentication',
                 'severity': 'HIGH',
-                'affected_object': f'{trust.source_domain} → {trust.target_domain}',
+                'affected_object': f'{trust.source_domain} → {trust.target_domain_name}',
                 'finding_type': 'TRUST_MISCONFIGURATION',
-                'message': f'Selective auth disabled on trust to {trust.target_domain}',
+                'message': f'Selective auth disabled on trust to {trust.target_domain_name}',
             })
 
     _send_ws_update(assessment_id, 'workflow_progress', {
