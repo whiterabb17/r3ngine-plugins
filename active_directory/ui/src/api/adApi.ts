@@ -13,6 +13,13 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
 export function useAssessments() {
   return useQuery({
     queryKey: ['ad', 'assessments'],
@@ -64,14 +71,16 @@ export function useCancelAssessment() {
   });
 }
 
-export function useFindings(assessmentId: number, severity?: string) {
+export function useFindings(assessmentId: number, severity?: string, page = 1) {
   return useQuery({
-    queryKey: ['ad', 'assessments', assessmentId, 'findings', severity],
+    queryKey: ['ad', 'assessments', assessmentId, 'findings', severity, page],
     queryFn: () => {
-      const url = severity
-        ? `${API_BASE}/${assessmentId}/findings/?severity=${severity}`
-        : `${API_BASE}/${assessmentId}/findings/`;
-      return apiFetch<ADFinding[]>(url);
+      const params = new URLSearchParams();
+      if (severity) params.set('severity', severity);
+      params.set('page', String(page));
+      return apiFetch<PaginatedResponse<ADFinding>>(
+        `${API_BASE}/${assessmentId}/findings/?${params}`
+      );
     },
     enabled: !!assessmentId,
   });

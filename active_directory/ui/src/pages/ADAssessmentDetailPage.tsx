@@ -21,9 +21,10 @@ const SEVERITY_COLOR: Record<string, 'error' | 'warning' | 'info' | 'default' | 
 
 export function ADAssessmentDetailPage({ assessmentId, onNavigate }: Props) {
   const [tab, setTab] = useState(0);
+  const [findingsPage, setFindingsPage] = useState(1);
   const [ingestOpen, setIngestOpen] = useState(false);
   const { data: assessment, isLoading } = useAssessment(assessmentId);
-  const { data: findings } = useFindings(assessmentId);
+  const { data: findingsData } = useFindings(assessmentId, undefined, findingsPage);
   const { mutate: cancel } = useCancelAssessment();
 
   // Connect WebSocket when assessment is running; batched events → realtimeStore
@@ -71,28 +72,45 @@ export function ADAssessmentDetailPage({ assessmentId, onNavigate }: Props) {
       </Tabs>
 
       {tab === 0 && (
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontFamily: 'Orbitron', fontSize: '0.68rem' }}>SEVERITY</TableCell>
-              <TableCell sx={{ fontFamily: 'Orbitron', fontSize: '0.68rem' }}>TITLE</TableCell>
-              <TableCell sx={{ fontFamily: 'Orbitron', fontSize: '0.68rem' }}>AFFECTED OBJECT</TableCell>
-              <TableCell sx={{ fontFamily: 'Orbitron', fontSize: '0.68rem' }}>TYPE</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {(findings ?? []).map((f) => (
-              <TableRow key={f.id} hover>
-                <TableCell>
-                  <Chip label={f.severity} color={SEVERITY_COLOR[f.severity] ?? 'default'} size="small" />
-                </TableCell>
-                <TableCell>{f.title}</TableCell>
-                <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{f.affected_object}</TableCell>
-                <TableCell sx={{ fontSize: '0.8rem' }}>{f.finding_type}</TableCell>
+        <Box>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontFamily: 'Orbitron', fontSize: '0.68rem' }}>SEVERITY</TableCell>
+                <TableCell sx={{ fontFamily: 'Orbitron', fontSize: '0.68rem' }}>TITLE</TableCell>
+                <TableCell sx={{ fontFamily: 'Orbitron', fontSize: '0.68rem' }}>AFFECTED OBJECT</TableCell>
+                <TableCell sx={{ fontFamily: 'Orbitron', fontSize: '0.68rem' }}>TYPE</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {(findingsData?.results ?? []).map((f) => (
+                <TableRow key={f.id} hover>
+                  <TableCell>
+                    <Chip label={f.severity} color={SEVERITY_COLOR[f.severity] ?? 'default'} size="small" />
+                  </TableCell>
+                  <TableCell>{f.title}</TableCell>
+                  <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{f.affected_object}</TableCell>
+                  <TableCell sx={{ fontSize: '0.8rem' }}>{f.finding_type}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          {(findingsData?.count ?? 0) > 50 && (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
+              <Button size="small" disabled={!findingsData?.previous}
+                onClick={() => setFindingsPage((p) => p - 1)}>
+                Prev
+              </Button>
+              <Typography variant="caption" sx={{ alignSelf: 'center', color: 'text.secondary' }}>
+                Page {findingsPage} · {findingsData?.count ?? 0} total
+              </Typography>
+              <Button size="small" disabled={!findingsData?.next}
+                onClick={() => setFindingsPage((p) => p + 1)}>
+                Next
+              </Button>
+            </Box>
+          )}
+        </Box>
       )}
 
       <IngestDataDialog

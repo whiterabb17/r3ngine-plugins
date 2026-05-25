@@ -6,6 +6,7 @@ import uuid
 
 from django.utils import timezone
 from rest_framework import status, viewsets
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -19,6 +20,12 @@ from .serializers import (ADAssessmentCreateSerializer,
                           ADTrustSerializer)
 
 logger = logging.getLogger(__name__)
+
+
+class ADPageNumberPagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = 'page_size'
+    max_page_size = 200
 
 
 class ADAssessmentViewSet(viewsets.ModelViewSet):
@@ -117,19 +124,32 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
         qs = assessment.findings.all()
         if severity:
             qs = qs.filter(severity=severity.upper())
+        paginator = ADPageNumberPagination()
+        page = paginator.paginate_queryset(qs, request)
+        if page is not None:
+            return paginator.get_paginated_response(
+                ADFindingSerializer(page, many=True).data)
         return Response(ADFindingSerializer(qs, many=True).data)
 
     @action(detail=True, methods=['get'], url_path='trusts')
     def trusts(self, request, pk=None):
         assessment = self.get_object()
-        return Response(
-            ADTrustSerializer(assessment.trusts.all(), many=True).data)
+        paginator = ADPageNumberPagination()
+        page = paginator.paginate_queryset(assessment.trusts.all(), request)
+        if page is not None:
+            return paginator.get_paginated_response(
+                ADTrustSerializer(page, many=True).data)
+        return Response(ADTrustSerializer(assessment.trusts.all(), many=True).data)
 
     @action(detail=True, methods=['get'], url_path='exposures')
     def exposures(self, request, pk=None):
         assessment = self.get_object()
-        return Response(
-            ADExposureSerializer(assessment.exposures.all(), many=True).data)
+        paginator = ADPageNumberPagination()
+        page = paginator.paginate_queryset(assessment.exposures.all(), request)
+        if page is not None:
+            return paginator.get_paginated_response(
+                ADExposureSerializer(page, many=True).data)
+        return Response(ADExposureSerializer(assessment.exposures.all(), many=True).data)
 
     @action(detail=True, methods=['get', 'post'], url_path='graph-snapshot')
     def graph_snapshot(self, request, pk=None):
