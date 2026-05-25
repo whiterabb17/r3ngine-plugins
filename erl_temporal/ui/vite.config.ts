@@ -5,9 +5,9 @@ export default defineConfig({
   plugins: [react()],
   build: {
     lib: {
-      entry: 'src/VulnerabilityTable.tsx',
-      name: 'VulnerabilityTable',
-      fileName: 'VulnerabilityTable',
+      entry: 'src/index.ts',
+      name: 'ERLTemporal',
+      fileName: 'index',
       formats: ['es'],
     },
     rollupOptions: {

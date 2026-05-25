@@ -107,8 +107,8 @@ There are two ways to add UI from a plugin:
 
 | Pattern | Use case | Example |
 |---------|----------|---------|
-| **Component override** | Replace an existing core component | `exploit-readiness-layer` overrides `VulnerabilityTable` |
-| **New pages** | Add entirely new pages with nav link | `active_directory` adds AD Intelligence pages |
+| **Component override** | Replace an existing core component | `custom_vuln_badge` overrides `VulnerabilityBadge` |
+| **New pages** | Add entirely new pages with nav link | `erl_temporal` adds Exploit Readiness Dashboard pages |
 
 Both patterns use the same Vite lib build. The difference is how the host integrates the output.
 
@@ -219,62 +219,24 @@ export function MyListPage({ projectSlug }: Props) {
 ```yaml
 ui:
   menu_item: "My Plugin"        # Nav label shown under "Plugins"
-  menu_path: "/my-plugin"       # Appended to /{projectSlug}/
+  menu_path: "/p/my_plugin"     # Mapped to the dynamic route /{projectSlug}/p/{slug}
+  entry_export: "MyListPage"    # Named export from dist/index.js representing the entry page
 ```
 
-When the plugin is enabled, the Shell reads `/api/plugins/registry/` and adds a nav link to `/{projectSlug}/my-plugin`.
+When the plugin is enabled, the Shell reads `/api/plugins/registry/` and adds a nav link to `/{projectSlug}/p/my_plugin`.
 
-### Step 5: Add routes in the host `frontend/src/router.tsx`
+### Step 5: Standardized Dynamic Routes
 
-The host needs routes for each page. Use `PluginPageLoader` from `frontend/src/features/plugins/components/PluginPageLoader.tsx`:
+The host system includes pre-defined generic routes to load plugin pages dynamically. This removes the need to hardcode router modifications for each new plugin page:
 
-```typescript
-import PluginPageLoader from './features/plugins/components/PluginPageLoader';
+* **Plugin Main Entry Route (`/{projectSlug}/p/$pluginSlug`)**:
+  Automatically resolves the active plugin, reads its `entry_export` property, and loads it.
+  
+* **Plugin Subpage Route (`/{projectSlug}/p/$pluginSlug/$pageName`)**:
+  Loads the named export component `$pageName` from the plugin barrel file. This allows plugin developers to define as many nested routes as they need (e.g. `/p/my_plugin/MyDetailPage`).
 
-// List page route
-const myPluginRoute = createRoute({
-  getParentRoute: () => projectRoute,
-  path: "my-plugin",
-  component: function MyPluginPage() {
-    return (
-      <PluginPageLoader
-        pluginSlug="my_plugin"
-        exportName="MyListPage"
-      />
-    );
-  },
-});
+Dynamic page routing works automatically out-of-the-box for any installed plugin.
 
-// Detail page with a URL param
-const myPluginDetailRoute = createRoute({
-  getParentRoute: () => projectRoute,
-  path: "my-plugin/$itemId",
-  component: function MyPluginDetailPage() {
-    const { itemId } = useParams({ strict: false });
-    return (
-      <PluginPageLoader
-        pluginSlug="my_plugin"
-        exportName="MyDetailPage"
-        itemId={Number(itemId)}
-      />
-    );
-  },
-});
-```
-
-Add the routes to the `routeTree`:
-
-```typescript
-const routeTree = rootRoute.addChildren([
-  rootRedirectRoute,
-  projectRoute.addChildren([
-    // ... existing routes ...
-    myPluginRoute,
-    myPluginDetailRoute,
-  ]),
-  // ...
-]);
-```
 
 ---
 
