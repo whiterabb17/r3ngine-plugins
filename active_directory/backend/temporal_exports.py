@@ -72,6 +72,11 @@ def run_dns_discovery_activity(params: dict) -> dict:
         'phase': 'dns_discovery',
         'message': f'Starting DNS discovery for {target_domain}',
     })
+    _send_ws_update(assessment_id, 'workflow_progress', {
+        'phase': 'dns_discovery',
+        'progress_pct': 10,
+        'message': f'Starting DNS discovery for {target_domain}',
+    })
 
     import socket
     discovered = []
@@ -112,6 +117,23 @@ def run_dns_discovery_activity(params: dict) -> dict:
     except Exception as e:
         logger.error(f"[AD DNS] Failed to persist domains: {e}")
 
+    for dc in discovered:
+        _send_ws_update(assessment_id, 'identity_discovered', {
+            'entity_type': 'domain_controller',
+            'name': dc['hostname'],
+            'message': f"Discovered DC: {dc['hostname']} ({dc['role']})",
+        })
+    _send_ws_update(assessment_id, 'workflow_progress', {
+        'phase': 'dns_discovery',
+        'progress_pct': 25,
+        'message': f'DNS discovery complete: {len(discovered)} controllers found',
+    })
+    _send_ws_update(assessment_id, 'graph_updated', {
+        'assessment_id': assessment_id,
+        'node_count': len(discovered),
+        'edge_count': 0,
+        'message': 'Domain graph updated with discovered controllers',
+    })
     _send_ws_update(assessment_id, 'phase_completed', {
         'phase': 'dns_discovery',
         'discovered_count': len(discovered),
@@ -146,6 +168,11 @@ def run_cert_discovery_activity(params: dict) -> dict:
         'phase': 'cert_discovery',
         'message': f'Enumerating certificate transparency logs for {target_domain}',
     })
+    _send_ws_update(assessment_id, 'workflow_progress', {
+        'phase': 'cert_discovery',
+        'progress_pct': 26,
+        'message': f'Starting certificate discovery for {target_domain}',
+    })
 
     import requests
     findings = []
@@ -173,6 +200,11 @@ def run_cert_discovery_activity(params: dict) -> dict:
     except Exception as e:
         logger.warning(f"[AD Cert] crt.sh query failed: {e}")
 
+    _send_ws_update(assessment_id, 'workflow_progress', {
+        'phase': 'cert_discovery',
+        'progress_pct': 40,
+        'message': f'Certificate discovery complete: {len(findings)} indicators found',
+    })
     _send_ws_update(assessment_id, 'phase_completed', {
         'phase': 'cert_discovery',
         'finding_count': len(findings),
@@ -196,6 +228,11 @@ def run_trust_analysis_activity(params: dict) -> dict:
         'phase': 'trust_analysis',
         'message': 'Analysing domain trust relationships',
     })
+    _send_ws_update(assessment_id, 'workflow_progress', {
+        'phase': 'trust_analysis',
+        'progress_pct': 41,
+        'message': 'Starting trust relationship analysis',
+    })
 
     from .models import ADTrust
     trusts = ADTrust.objects.filter(assessment_id=assessment_id)
@@ -215,6 +252,28 @@ def run_trust_analysis_activity(params: dict) -> dict:
         trust.save(update_fields=['risk_score'])
         risk_updates.append({'trust_id': trust.id, 'risk_score': trust.risk_score})
 
+        _send_ws_update(assessment_id, 'trust_discovered', {
+            'source_domain': trust.source_domain,
+            'target_domain': trust.target_domain,
+            'trust_type': trust.trust_type,
+            'is_transitive': trust.is_transitive,
+            'message': f'Trust discovered: {trust.source_domain} → {trust.target_domain}',
+        })
+        if not trust.is_selective_auth:
+            _send_ws_update(assessment_id, 'finding_detected', {
+                'finding_id': f'trust_no_sid_filter_{trust.id}',
+                'title': 'Trust without Selective Authentication',
+                'severity': 'HIGH',
+                'affected_object': f'{trust.source_domain} → {trust.target_domain}',
+                'finding_type': 'TRUST_MISCONFIGURATION',
+                'message': f'Selective auth disabled on trust to {trust.target_domain}',
+            })
+
+    _send_ws_update(assessment_id, 'workflow_progress', {
+        'phase': 'trust_analysis',
+        'progress_pct': 60,
+        'message': f'Trust analysis complete: {len(risk_updates)} trusts scored',
+    })
     _send_ws_update(assessment_id, 'phase_completed', {
         'phase': 'trust_analysis',
         'trust_count': len(risk_updates),
@@ -240,6 +299,11 @@ def run_exposure_correlation_activity(params: dict) -> dict:
     _send_ws_update(assessment_id, 'phase_started', {
         'phase': 'exposure_correlation',
         'message': 'Correlating external exposures with identity infrastructure',
+    })
+    _send_ws_update(assessment_id, 'workflow_progress', {
+        'phase': 'exposure_correlation',
+        'progress_pct': 61,
+        'message': 'Starting exposure correlation',
     })
 
     from .models import ADAssessment, ADExposure
@@ -283,6 +347,37 @@ def run_exposure_correlation_activity(params: dict) -> dict:
     except Exception as e:
         logger.error(f"[AD Exposure] Correlation failed: {e}")
 
+    try:
+        exposures = list(ADExposure.objects.filter(assessment_id=assessment_id))
+        high_risk = [e for e in exposures if e.risk_score >= 70]
+        for exp in high_risk:
+            _send_ws_update(assessment_id, 'finding_detected', {
+                'finding_id': f'exposure_high_risk_{exp.id}',
+                'title': f'High-Risk Exposure: {exp.exposure_type}',
+                'severity': 'HIGH' if exp.risk_score >= 85 else 'MEDIUM',
+                'affected_object': exp.hostname,
+                'finding_type': 'EXPOSURE',
+                'message': f'High-risk exposure detected: {exp.hostname} (score {exp.risk_score})',
+            })
+        _send_ws_update(assessment_id, 'correlation_completed', {
+            'exposure_count': len(exposures),
+            'high_risk_count': len(high_risk),
+            'message': f'Correlation complete: {len(exposures)} exposures, {len(high_risk)} high-risk',
+        })
+        _send_ws_update(assessment_id, 'graph_updated', {
+            'assessment_id': assessment_id,
+            'node_count': len(exposures),
+            'edge_count': len(high_risk),
+            'message': 'Exposure graph updated',
+        })
+    except Exception as e:
+        logger.warning(f"[AD Exposure] Post-correlation events failed (non-fatal): {e}")
+
+    _send_ws_update(assessment_id, 'workflow_progress', {
+        'phase': 'exposure_correlation',
+        'progress_pct': 80,
+        'message': f'Exposure correlation complete: {created_count} new exposures',
+    })
     _send_ws_update(assessment_id, 'phase_completed', {
         'phase': 'exposure_correlation',
         'exposure_count': created_count,
@@ -305,6 +400,11 @@ def run_neo4j_sync_activity(params: dict) -> dict:
     _send_ws_update(assessment_id, 'phase_started', {
         'phase': 'neo4j_sync',
         'message': 'Syncing assessment data to graph database',
+    })
+    _send_ws_update(assessment_id, 'workflow_progress', {
+        'phase': 'graph_sync',
+        'progress_pct': 81,
+        'message': 'Starting graph database sync',
     })
 
     try:
@@ -342,6 +442,11 @@ def run_neo4j_sync_activity(params: dict) -> dict:
         logger.warning(f"[AD Neo4j] Sync failed (non-fatal): {e}")
         node_count = 0
 
+    _send_ws_update(assessment_id, 'workflow_progress', {
+        'phase': 'graph_sync',
+        'progress_pct': 95,
+        'message': f'Graph sync complete: {node_count} nodes',
+    })
     _send_ws_update(assessment_id, 'phase_completed', {
         'phase': 'neo4j_sync',
         'node_count': node_count,
