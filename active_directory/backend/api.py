@@ -134,22 +134,24 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], url_path='trusts')
     def trusts(self, request, pk=None):
         assessment = self.get_object()
+        qs = assessment.trusts.all()
         paginator = ADPageNumberPagination()
-        page = paginator.paginate_queryset(assessment.trusts.all(), request)
+        page = paginator.paginate_queryset(qs, request)
         if page is not None:
             return paginator.get_paginated_response(
                 ADTrustSerializer(page, many=True).data)
-        return Response(ADTrustSerializer(assessment.trusts.all(), many=True).data)
+        return Response(ADTrustSerializer(qs, many=True).data)
 
     @action(detail=True, methods=['get'], url_path='exposures')
     def exposures(self, request, pk=None):
         assessment = self.get_object()
+        qs = assessment.exposures.all()
         paginator = ADPageNumberPagination()
-        page = paginator.paginate_queryset(assessment.exposures.all(), request)
+        page = paginator.paginate_queryset(qs, request)
         if page is not None:
             return paginator.get_paginated_response(
                 ADExposureSerializer(page, many=True).data)
-        return Response(ADExposureSerializer(assessment.exposures.all(), many=True).data)
+        return Response(ADExposureSerializer(qs, many=True).data)
 
     @action(detail=True, methods=['get', 'post'], url_path='graph-snapshot')
     def graph_snapshot(self, request, pk=None):

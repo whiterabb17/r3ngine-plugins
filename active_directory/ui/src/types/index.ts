@@ -24,12 +24,15 @@ export interface ADFinding {
 
 export interface ADTrust {
   id: number;
-  source_domain: string;
-  target_domain: string;
+  source_domain: number;
+  source_domain_fqdn: string;
+  target_domain_name: string;
+  direction: string;
   trust_type: string;
-  trust_direction: string;
   is_transitive: boolean;
-  sid_filtering_enabled: boolean;
+  is_selective_auth: boolean;
+  risk_score: number;
+  metadata: Record<string, unknown>;
 }
 
 export interface ADExposure {

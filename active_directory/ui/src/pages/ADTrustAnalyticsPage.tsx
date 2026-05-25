@@ -40,15 +40,15 @@ export function ADTrustAnalyticsPage({ assessmentId }: Props) {
         <TableBody>
           {trustList.map((t) => (
             <TableRow key={t.id} hover>
-              <TableCell sx={{ fontFamily: 'monospace' }}>{t.source_domain}</TableCell>
-              <TableCell sx={{ fontFamily: 'monospace' }}>{t.target_domain}</TableCell>
+              <TableCell sx={{ fontFamily: 'monospace' }}>{t.source_domain_fqdn}</TableCell>
+              <TableCell sx={{ fontFamily: 'monospace' }}>{t.target_domain_name}</TableCell>
               <TableCell><Chip label={t.trust_type} size="small" /></TableCell>
-              <TableCell>{t.trust_direction}</TableCell>
+              <TableCell>{t.direction}</TableCell>
               <TableCell>
                 <Chip label={t.is_transitive ? 'YES' : 'NO'} color={t.is_transitive ? 'warning' : 'default'} size="small" />
               </TableCell>
               <TableCell>
-                <Chip label={t.sid_filtering_enabled ? 'ON' : 'OFF'} color={t.sid_filtering_enabled ? 'success' : 'error'} size="small" />
+                <Chip label={t.is_selective_auth ? 'ON' : 'OFF'} color={t.is_selective_auth ? 'success' : 'error'} size="small" />
               </TableCell>
             </TableRow>
           ))}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Button, Tabs, Tab, Table, TableHead,
   TableBody, TableRow, TableCell, Chip, CircularProgress,
@@ -23,6 +23,8 @@ export function ADAssessmentDetailPage({ assessmentId, onNavigate }: Props) {
   const [tab, setTab] = useState(0);
   const [findingsPage, setFindingsPage] = useState(1);
   const [ingestOpen, setIngestOpen] = useState(false);
+
+  useEffect(() => { setFindingsPage(1); }, [assessmentId]);
   const { data: assessment, isLoading } = useAssessment(assessmentId);
   const { data: findingsData } = useFindings(assessmentId, undefined, findingsPage);
   const { mutate: cancel } = useCancelAssessment();
