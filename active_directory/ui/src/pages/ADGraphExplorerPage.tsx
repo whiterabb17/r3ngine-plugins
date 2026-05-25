@@ -9,6 +9,7 @@ import { LAYOUT_CONFIGS } from '../graphs/cytoscapeLayouts';
 import { useGraphSearch } from '../graphs/useGraphSearch';
 import { useGraphFocus } from '../graphs/useGraphFocus';
 import { useGraphViewport } from '../graphs/useGraphViewport';
+import { useRealtimeStore } from '../store/realtimeStore';
 import { GraphToolbar } from '../components/GraphToolbar';
 import { GraphNodePanel } from '../components/GraphNodePanel';
 import { GraphLegend } from '../components/GraphLegend';
@@ -18,7 +19,7 @@ interface Props {
 }
 
 export function ADGraphExplorerPage({ assessmentId }: Props) {
-  const { data, isLoading, error, dataUpdatedAt } = useDomainGraph(assessmentId);
+  const { data, isLoading, error, dataUpdatedAt, refetch } = useDomainGraph(assessmentId);
   const {
     graphLayout, setGraphLayout,
     selectedNodeId, selectedNodeData, setSelectedNode,
@@ -30,6 +31,15 @@ export function ADGraphExplorerPage({ assessmentId }: Props) {
   const { saveViewport, restoreViewport, clearViewport } = useGraphViewport();
   const matchingNodeIds = useGraphSearch(data, searchQuery);
   const connectedNodeIds = useGraphFocus(selectedNodeId, data, focusMode);
+
+  // Trigger graph refetch when a graph_updated WS event arrives
+  const pendingGraphRefresh = useRealtimeStore((s) => s.pendingGraphRefresh);
+  const clearPendingGraphRefresh = useRealtimeStore((s) => s.clearPendingGraphRefresh);
+  useEffect(() => {
+    if (!pendingGraphRefresh) return;
+    clearPendingGraphRefresh();
+    void refetch();
+  }, [pendingGraphRefresh, clearPendingGraphRefresh, refetch]);
 
   // Apply search highlight classes when matchingNodeIds changes
   useEffect(() => {
