@@ -14,7 +14,9 @@ export function ADTrustAnalyticsPage({ assessmentId }: Props) {
 
   if (isLoading) return <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}><CircularProgress /></Box>;
   if (error) return <Alert severity="error">Failed to load trust data</Alert>;
-  if (!trusts?.length) return (
+  const trustList = trusts?.results ?? [];
+
+  if (!trustList.length) return (
     <Box>
       <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 2 }}>TRUST ANALYTICS</Typography>
       <Alert severity="info">No trust relationships found. Run an assessment to discover domain trusts.</Alert>
@@ -36,7 +38,7 @@ export function ADTrustAnalyticsPage({ assessmentId }: Props) {
           </TableRow>
         </TableHead>
         <TableBody>
-          {trusts.map((t) => (
+          {trustList.map((t) => (
             <TableRow key={t.id} hover>
               <TableCell sx={{ fontFamily: 'monospace' }}>{t.source_domain}</TableCell>
               <TableCell sx={{ fontFamily: 'monospace' }}>{t.target_domain}</TableCell>

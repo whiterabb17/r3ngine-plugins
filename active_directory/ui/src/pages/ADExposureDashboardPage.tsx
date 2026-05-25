@@ -37,14 +37,16 @@ export function ADExposureDashboardPage({ assessmentId }: Props) {
 
   if (isLoading) return <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}><CircularProgress /></Box>;
   if (error) return <Alert severity="error">Failed to load exposure data</Alert>;
-  if (!exposures?.length) return (
+  const exposureList = exposures?.results ?? [];
+
+  if (!exposureList.length) return (
     <Box>
       <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 2 }}>EXPOSURE DASHBOARD</Typography>
       <Alert severity="info">No exposure data yet. Run correlation analysis to identify attack surface exposures.</Alert>
     </Box>
   );
 
-  const sorted = [...exposures].sort((a, b) => b.risk_score - a.risk_score);
+  const sorted = [...exposureList].sort((a, b) => b.risk_score - a.risk_score);
 
   return (
     <Box>

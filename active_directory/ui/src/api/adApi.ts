@@ -89,7 +89,7 @@ export function useFindings(assessmentId: number, severity?: string, page = 1) {
 export function useTrusts(assessmentId: number) {
   return useQuery({
     queryKey: ['ad', 'assessments', assessmentId, 'trusts'],
-    queryFn: () => apiFetch<ADTrust[]>(`${API_BASE}/${assessmentId}/trusts/`),
+    queryFn: () => apiFetch<PaginatedResponse<ADTrust>>(`${API_BASE}/${assessmentId}/trusts/`),
     enabled: !!assessmentId,
   });
 }
@@ -97,7 +97,7 @@ export function useTrusts(assessmentId: number) {
 export function useExposures(assessmentId: number) {
   return useQuery({
     queryKey: ['ad', 'assessments', assessmentId, 'exposures'],
-    queryFn: () => apiFetch<ADExposure[]>(`${API_BASE}/${assessmentId}/exposures/`),
+    queryFn: () => apiFetch<PaginatedResponse<ADExposure>>(`${API_BASE}/${assessmentId}/exposures/`),
     enabled: !!assessmentId,
   });
 }
