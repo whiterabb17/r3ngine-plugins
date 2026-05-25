@@ -107,3 +107,29 @@ export interface WSMessage {
   type: WSEventType;
   payload: Record<string, unknown>;
 }
+
+export interface ADReport {
+  metadata: {
+    report_id: string;
+    target_domain: string;
+    assessment_name: string;
+    status: string;
+    generated_at: string;
+  };
+  executive_summary: {
+    domain_count: number;
+    trust_count: number;
+    exposure_count: number;
+    finding_counts: Record<string, number>;
+    average_trust_risk: number;
+    average_exposure_risk: number;
+    critical_findings: Array<{ title: string; affected_object: string; finding_type: string }>;
+  };
+  findings: Array<{
+    title: string;
+    severity: string;
+    affected_object: string;
+    remediation: string;
+    finding_type: string;
+  }>;
+}

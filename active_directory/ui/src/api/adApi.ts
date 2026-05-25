@@ -109,6 +109,27 @@ export function useExposureGraph(assessmentId: number) {
   });
 }
 
+export function useGenerateReport() {
+  return useMutation({
+    mutationFn: async ({ assessmentId, format }: { assessmentId: number; format: 'json' | 'pdf' }) => {
+      const res = await fetch(`${API_BASE}/${assessmentId}/report/?format=${format}`, {
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error(`Report error ${res.status}`);
+      const blob = await res.blob();
+      const disposition = res.headers.get('Content-Disposition') ?? '';
+      const match = disposition.match(/filename="([^"]+)"/);
+      const filename = match?.[1] ?? `ad-report-${assessmentId}.${format}`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+  });
+}
+
 export function useIngestData() {
   const qc = useQueryClient();
   return useMutation({

@@ -191,6 +191,40 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
             return Response({'path': [], 'error': str(exc)},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=True, methods=['get'], url_path='report')
+    def report(self, request, pk=None):
+        """
+        Generate and stream an assessment report.
+        Query param: ?format=json (default) | pdf
+        """
+        assessment = self.get_object()
+        fmt = request.query_params.get('format', 'json').lower()
+        try:
+            from .reporting.engine import ReportingEngine
+            compiled = ReportingEngine.compile(assessment.id)
+            if fmt == 'pdf':
+                from .reporting.pdf_renderer import PDFRenderer
+                from django.http import HttpResponse
+                pdf_bytes = PDFRenderer.render(compiled)
+                filename = f"ad-report-{assessment.id}-{assessment.target_domain}.pdf"
+                response = HttpResponse(pdf_bytes, content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                return response
+            else:
+                from .reporting.json_renderer import JSONRenderer
+                from django.http import HttpResponse
+                json_bytes = JSONRenderer.render(compiled)
+                filename = f"ad-report-{assessment.id}-{assessment.target_domain}.json"
+                response = HttpResponse(json_bytes, content_type='application/json')
+                response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                return response
+        except Exception as exc:
+            logger.error(f"[AD Report] Generation failed: {exc}")
+            return Response(
+                {'error': str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
     @action(detail=True, methods=['post'], url_path='ingest',
             parser_classes=[MultiPartParser])
     def ingest(self, request, pk=None):
