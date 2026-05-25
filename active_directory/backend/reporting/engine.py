@@ -11,6 +11,10 @@ class ReportingEngine:
 
     @classmethod
     def compile(cls, assessment_id: int) -> dict:
+        """
+        Compile a structured report dict for the given assessment.
+        Raises ADAssessment.DoesNotExist if assessment_id is not found.
+        """
         from ..models import ADAssessment
         assessment = ADAssessment.objects.get(pk=assessment_id)
         return {
@@ -103,7 +107,7 @@ class ReportingEngine:
             assessment.findings.values(
                 'title', 'description', 'severity', 'status',
                 'finding_type', 'affected_object', 'remediation', 'created_at',
-            ).order_by('severity', '-created_at')
+            )
         )
 
     @staticmethod
@@ -120,5 +124,5 @@ class ReportingEngine:
                 }
                 for e in entries
             ]
-        except Exception:
+        except (ImportError, AttributeError):
             return []
