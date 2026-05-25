@@ -17,7 +17,7 @@ const SEV_COLOR: Record<string, 'error' | 'warning' | 'info' | 'default'> = {
 
 export function ADReportsPage({ assessmentId }: Props) {
   const [format, setFormat] = useState<'json' | 'pdf'>('pdf');
-  const { data: assessment, isLoading } = useAssessment(assessmentId);
+  const { data: assessment, isLoading, error: assessmentError } = useAssessment(assessmentId);
   const { mutate: generate, isPending, error } = useGenerateReport();
 
   if (isLoading) {
@@ -26,6 +26,12 @@ export function ADReportsPage({ assessmentId }: Props) {
         <CircularProgress />
       </Box>
     );
+  }
+  if (assessmentError) {
+    return <Alert severity="error">Failed to load assessment: {(assessmentError as Error).message}</Alert>;
+  }
+  if (!assessment) {
+    return <Alert severity="warning">Assessment not found.</Alert>;
   }
 
   const summary = (assessment as any)?.finding_summary ?? {};
