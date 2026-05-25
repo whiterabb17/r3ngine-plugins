@@ -411,7 +411,7 @@ def run_neo4j_sync_activity(params: dict) -> dict:
     })
 
     try:
-        from reNgine.graph_utils import Neo4jManager
+        from reNgine.utils.graph import Neo4jManager
         from .models import ADDomain
 
         manager = Neo4jManager()

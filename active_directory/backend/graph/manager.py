@@ -16,7 +16,7 @@ class ADGraphManager:
     """
 
     def __init__(self):
-        from reNgine.graph_utils import Neo4jManager
+        from reNgine.utils.graph import Neo4jManager
         self._core = Neo4jManager()
         self._driver = self._core.driver
 

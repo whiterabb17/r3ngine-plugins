@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 from ..core.normalizer import Finding
 from ..core.subprocess_executor import SubprocessExecutor
-from reNgine.opsec_utils import ProxychainsWrapper, OpSecManager
+from reNgine.utils.opsec import ProxychainsWrapper, OpSecManager
 
 class BaseAdapter(ABC):
     """
