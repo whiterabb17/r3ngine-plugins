@@ -1,4 +1,5 @@
 # r3ngine-plugins/active_directory/backend/models.py
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -22,6 +23,13 @@ class ADAssessment(models.Model):
     completed_at = models.DateTimeField(blank=True, null=True)
     error_message = models.TextField(blank=True, null=True)
     config = models.JSONField(default=dict, help_text="Assessment configuration")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='ad_assessments',
+    )
     progress = models.JSONField(default=dict, help_text="Current phase progress map")
 
     class Meta:
