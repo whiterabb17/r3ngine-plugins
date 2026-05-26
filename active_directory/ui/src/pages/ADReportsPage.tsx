@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import {
   Box, Typography, Button, CircularProgress, Alert,
-  ToggleButtonGroup, ToggleButton, Divider, Paper,
+  Divider, Paper,
   Table, TableHead, TableBody, TableRow, TableCell, Chip,
 } from '@mui/material';
-import { FileJson, FileText } from 'lucide-react';
-import { useAssessment, useGenerateReport } from '../api/adApi';
+import { FileDown } from 'lucide-react';
+import { useAssessment } from '../api/adApi';
+import { ADReportModal } from '../components/ADReportModal';
 
 interface Props {
   assessmentId: number;
@@ -16,9 +17,8 @@ const SEV_COLOR: Record<string, 'error' | 'warning' | 'info' | 'default'> = {
 };
 
 export function ADReportsPage({ assessmentId }: Props) {
-  const [format, setFormat] = useState<'json' | 'pdf'>('pdf');
+  const [modalOpen, setModalOpen] = useState(false);
   const { data: assessment, isLoading, error: assessmentError } = useAssessment(assessmentId);
-  const { mutate: generate, isPending, error } = useGenerateReport();
 
   if (isLoading) {
     return (
@@ -55,28 +55,13 @@ export function ADReportsPage({ assessmentId }: Props) {
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-          <ToggleButtonGroup
-            value={format}
-            exclusive
-            onChange={(_e, val) => val && setFormat(val as 'json' | 'pdf')}
-            size="small"
-          >
-            <ToggleButton value="pdf">
-              <FileText size={14} style={{ marginRight: 6 }} /> PDF
-            </ToggleButton>
-            <ToggleButton value="json">
-              <FileJson size={14} style={{ marginRight: 6 }} /> JSON
-            </ToggleButton>
-          </ToggleButtonGroup>
-
           <Button
             variant="contained"
-            disabled={isPending || assessment?.status === 'RUNNING'}
-            onClick={() => generate({ assessmentId, format })}
-            size="small"
+            startIcon={<FileDown size={16} />}
+            onClick={() => setModalOpen(true)}
+            sx={{ fontFamily: 'Orbitron', fontSize: '0.75rem', letterSpacing: 1 }}
           >
-            {isPending ? <CircularProgress size={16} sx={{ mr: 1 }} /> : null}
-            {isPending ? 'Generating…' : 'Download Report'}
+            Generate Report
           </Button>
 
           {assessment?.status === 'RUNNING' && (
@@ -85,13 +70,13 @@ export function ADReportsPage({ assessmentId }: Props) {
             </Typography>
           )}
         </Box>
-
-        {error && (
-          <Alert severity="error" sx={{ mt: 1.5 }}>
-            Report generation failed: {(error as Error).message}
-          </Alert>
-        )}
       </Paper>
+
+      <ADReportModal
+        assessmentId={assessmentId}
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+      />
 
       <Divider sx={{ mb: 2 }} />
 

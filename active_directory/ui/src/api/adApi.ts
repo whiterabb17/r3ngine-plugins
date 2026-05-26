@@ -122,8 +122,18 @@ export function useExposureGraph(assessmentId: number) {
 
 export function useGenerateReport() {
   return useMutation({
-    mutationFn: async ({ assessmentId, format }: { assessmentId: number; format: 'json' | 'pdf' }) => {
-      const res = await fetch(`${API_BASE}/${assessmentId}/report/?format=${format}`, {
+    mutationFn: async ({
+      assessmentId,
+      format,
+      template = 'standard',
+    }: {
+      assessmentId: number;
+      format: 'json' | 'pdf';
+      template?: string;
+    }) => {
+      const params = new URLSearchParams({ format });
+      if (format === 'pdf' && template !== 'standard') params.set('template', template);
+      const res = await fetch(`${API_BASE}/${assessmentId}/report/?${params}`, {
         credentials: 'include',
       });
       if (!res.ok) throw new Error(`Report error ${res.status}`);
