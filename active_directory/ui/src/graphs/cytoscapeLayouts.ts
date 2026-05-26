@@ -55,3 +55,11 @@ export const LAYOUT_CONFIGS: Record<LayoutName, any> = {
     fit: false,
   },
 };
+
+export function getLayoutConfig(name: LayoutName, elementCount: number) {
+  const base = LAYOUT_CONFIGS[name];
+  if (elementCount > 400) {
+    return { ...base, animate: false };
+  }
+  return base;
+}

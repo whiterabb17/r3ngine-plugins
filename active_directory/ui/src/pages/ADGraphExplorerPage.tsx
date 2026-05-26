@@ -5,7 +5,7 @@ import { Box, Typography, Alert, Button, CircularProgress } from '@mui/material'
 import { useDomainGraph } from '../api/adApi';
 import { useADStore } from '../store/adStore';
 import { CYTOSCAPE_STYLESHEET } from '../graphs/cytoscapeStyles';
-import { LAYOUT_CONFIGS } from '../graphs/cytoscapeLayouts';
+import { getLayoutConfig } from '../graphs/cytoscapeLayouts';
 import { useGraphSearch } from '../graphs/useGraphSearch';
 import { useGraphFocus } from '../graphs/useGraphFocus';
 import { useGraphViewport } from '../graphs/useGraphViewport';
@@ -184,7 +184,7 @@ export function ADGraphExplorerPage({ assessmentId }: Props) {
             elements={elements}
             style={{ width: '100%', height: '100%' }}
             stylesheet={CYTOSCAPE_STYLESHEET}
-            layout={LAYOUT_CONFIGS[graphLayout]}
+            layout={getLayoutConfig(graphLayout, elements.length)}
             cy={handleCyReady}
             wheelSensitivity={0.2}
           />
