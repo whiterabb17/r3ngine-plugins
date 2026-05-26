@@ -44,7 +44,7 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ('update', 'partial_update', 'destroy',
-                           'start', 'cancel', 'ingest'):
+                           'start', 'cancel', 'ingest', 'graph_snapshot'):
             return [IsAuthenticated(), IsAssessmentOwnerOrAdmin()]
         return [IsAuthenticated()]
 
@@ -335,8 +335,10 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
             extract_dir = tempfile.mkdtemp()
             try:
                 with zipfile.ZipFile(file_path, 'r') as zf:
+                    safe_root = os.path.realpath(extract_dir) + os.sep
                     for member in zf.infolist():
-                        if os.path.isabs(member.filename) or '..' in member.filename.split('/'):
+                        dest = os.path.realpath(os.path.join(extract_dir, member.filename))
+                        if not dest.startswith(safe_root):
                             raise ValueError(f"Unsafe path in zip archive: {member.filename}")
                     zf.extractall(extract_dir)
                 return ADAssessmentViewSet._run_ingestion(
