@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Box, ToggleButton, ToggleButtonGroup,
   TextField, IconButton, Tooltip, InputAdornment,

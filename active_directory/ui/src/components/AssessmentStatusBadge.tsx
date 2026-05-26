@@ -1,4 +1,3 @@
-import React from 'react';
 import { Chip } from '@mui/material';
 
 const STATUS_COLORS: Record<string, 'default' | 'warning' | 'info' | 'success' | 'error'> = {

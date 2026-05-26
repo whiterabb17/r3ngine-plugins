@@ -1,4 +1,3 @@
-import React from 'react';
 import { Box, Typography, LinearProgress, Collapse, Chip } from '@mui/material';
 import { useRealtimeStore } from '../store/realtimeStore';
 

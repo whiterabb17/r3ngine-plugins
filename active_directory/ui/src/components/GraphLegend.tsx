@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Box, Typography, Collapse } from '@mui/material';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { NODE_COLORS, NODE_SHAPES } from '../graphs/cytoscapeStyles';

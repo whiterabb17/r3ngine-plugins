@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Box, Typography, Table, TableHead, TableBody,
   TableRow, TableCell, Chip, CircularProgress, Alert

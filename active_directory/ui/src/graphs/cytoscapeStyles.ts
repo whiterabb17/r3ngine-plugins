@@ -1,4 +1,4 @@
-import type { Stylesheet } from 'cytoscape';
+import type cytoscape from 'cytoscape';
 
 export const NODE_COLORS: Record<string, string> = {
   ADDomain: '#00f3ff',
@@ -27,7 +27,7 @@ export const NODE_SHAPES: Record<string, string> = {
   ADFinding: '★', ADIdentityProvider: '●', ADVPNGateway: '⬠', ADAuthService: '▬',
 };
 
-export const CYTOSCAPE_STYLESHEET: Stylesheet[] = [
+export const CYTOSCAPE_STYLESHEET: cytoscape.StylesheetStyle[] = [
   {
     selector: 'node',
     style: {
@@ -37,7 +37,7 @@ export const CYTOSCAPE_STYLESHEET: Stylesheet[] = [
       'font-size': 10,
       'text-valign': 'center',
       'text-halign': 'center',
-      'text-wrap': 'truncate',
+      'text-wrap': 'ellipsis',
       'text-max-width': '80px',
       width: 36,
       height: 36,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Box, Typography, Button, CircularProgress, Alert,
   ToggleButtonGroup, ToggleButton, Divider, Paper,

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Box, Typography, Divider, Chip, IconButton } from '@mui/material';
 import { X } from 'lucide-react';
 import { NODE_COLORS } from '../graphs/cytoscapeStyles';
