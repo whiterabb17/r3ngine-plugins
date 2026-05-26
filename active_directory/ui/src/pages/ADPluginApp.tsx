@@ -6,13 +6,15 @@ import { ADAssessmentDetailPage } from './ADAssessmentDetailPage';
 import { ADGraphExplorerPage } from './ADGraphExplorerPage';
 import { ADTrustAnalyticsPage } from './ADTrustAnalyticsPage';
 import { ADExposureDashboardPage } from './ADExposureDashboardPage';
+import { ADReportsPage } from './ADReportsPage';
 
 type Route =
   | { view: 'list' }
   | { view: 'detail'; assessmentId: number }
   | { view: 'graph'; assessmentId: number }
   | { view: 'trusts'; assessmentId: number }
-  | { view: 'exposures'; assessmentId: number };
+  | { view: 'exposures'; assessmentId: number }
+  | { view: 'reports'; assessmentId: number };
 
 function parseSubpath(subpath: string): Route {
   const m = subpath.match(/^assessment\/(\d+)(?:\/(\w+))?/);
@@ -22,6 +24,7 @@ function parseSubpath(subpath: string): Route {
     if (view === 'graph') return { view: 'graph', assessmentId };
     if (view === 'trusts') return { view: 'trusts', assessmentId };
     if (view === 'exposures') return { view: 'exposures', assessmentId };
+    if (view === 'reports') return { view: 'reports', assessmentId };
     return { view: 'detail', assessmentId };
   }
   return { view: 'list' };
@@ -40,6 +43,7 @@ export function ADPluginApp({ subpath = '' }: { subpath?: string }) {
       if (path === 'graph') { setRoute({ view: 'graph', assessmentId }); return; }
       if (path === 'trusts') { setRoute({ view: 'trusts', assessmentId }); return; }
       if (path === 'exposures') { setRoute({ view: 'exposures', assessmentId }); return; }
+      if (path === 'reports') { setRoute({ view: 'reports', assessmentId }); return; }
     }
   };
 
@@ -67,6 +71,7 @@ export function ADPluginApp({ subpath = '' }: { subpath?: string }) {
       {route.view === 'graph' && <ADGraphExplorerPage assessmentId={route.assessmentId} />}
       {route.view === 'trusts' && <ADTrustAnalyticsPage assessmentId={route.assessmentId} />}
       {route.view === 'exposures' && <ADExposureDashboardPage assessmentId={route.assessmentId} />}
+      {route.view === 'reports' && <ADReportsPage assessmentId={route.assessmentId} />}
     </Box>
   );
 }

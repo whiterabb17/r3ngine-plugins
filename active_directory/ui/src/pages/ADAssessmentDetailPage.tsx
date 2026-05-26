@@ -3,7 +3,7 @@ import {
   Box, Typography, Button, Tabs, Tab, Table, TableHead,
   TableBody, TableRow, TableCell, Chip, CircularProgress,
 } from '@mui/material';
-import { Upload, XCircle } from 'lucide-react';
+import { Upload, XCircle, Network, FileText } from 'lucide-react';
 import { useAssessment, useFindings, useCancelAssessment, useEvidenceLog } from '../api/adApi';
 import type { ADEvidenceLogEntry } from '../types';
 import { AssessmentStatusBadge } from '../components/AssessmentStatusBadge';
@@ -11,6 +11,8 @@ import { IngestDataDialog } from '../components/IngestDataDialog';
 import { WorkflowProgressPanel } from '../components/WorkflowProgressPanel';
 import { useWsEventBus } from '../hooks/useWsEventBus';
 import { useAnalyticsStore } from '../store/analyticsStore';
+import { ADTrustAnalyticsPage } from './ADTrustAnalyticsPage';
+import { ADExposureDashboardPage } from './ADExposureDashboardPage';
 
 interface Props {
   assessmentId: number;
@@ -70,8 +72,13 @@ export function ADAssessmentDetailPage({ assessmentId, onNavigate }: Props) {
               Cancel
             </Button>
           )}
-          <Button size="small" variant="outlined" onClick={() => onNavigate?.('graph')}>
+          <Button size="small" variant="outlined" startIcon={<Network size={14} />}
+            onClick={() => onNavigate?.('graph')}>
             Graph Explorer
+          </Button>
+          <Button size="small" variant="outlined" startIcon={<FileText size={14} />}
+            onClick={() => onNavigate?.('reports')}>
+            Reports
           </Button>
         </Box>
       </Box>
@@ -139,6 +146,10 @@ export function ADAssessmentDetailPage({ assessmentId, onNavigate }: Props) {
           )}
         </Box>
       )}
+
+      {tab === 1 && <ADTrustAnalyticsPage assessmentId={assessmentId} />}
+
+      {tab === 2 && <ADExposureDashboardPage assessmentId={assessmentId} />}
 
       {tab === 3 && (
         <Box>
