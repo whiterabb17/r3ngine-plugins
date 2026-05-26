@@ -74,6 +74,7 @@ class ADAssessmentListSerializer(serializers.ModelSerializer):
             'created_at', 'started_at', 'completed_at',
             'domain_count', 'finding_count', 'exposure_count', 'created_by',
         ]
+        read_only_fields = ['id', 'created_at', 'started_at', 'completed_at', 'created_by']
 
     def get_domain_count(self, obj):
         return obj.domains.count()
@@ -97,6 +98,10 @@ class ADAssessmentDetailSerializer(serializers.ModelSerializer):
             'id', 'name', 'target_domain', 'status', 'workflow_id',
             'created_at', 'started_at', 'completed_at', 'error_message',
             'config', 'progress', 'created_by', 'domains', 'finding_summary', 'exposure_summary',
+        ]
+        read_only_fields = [
+            'id', 'created_at', 'started_at', 'completed_at',
+            'error_message', 'workflow_id', 'created_by',
         ]
 
     def get_finding_summary(self, obj):
