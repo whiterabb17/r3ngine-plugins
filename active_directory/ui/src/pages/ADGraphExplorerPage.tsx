@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import CytoscapeComponent from 'react-cytoscapejs';
 import type cytoscape from 'cytoscape';
 import { Box, Typography, Alert, Button, CircularProgress } from '@mui/material';
@@ -110,6 +110,15 @@ export function ADGraphExplorerPage({ assessmentId }: Props) {
     a.click();
   }, [assessmentId]);
 
+  const elements = useMemo(
+    () => [...(data?.nodes ?? []), ...(data?.edges ?? [])],
+    [data],
+  );
+  const layoutConfig = useMemo(
+    () => getLayoutConfig(graphLayout, elements.length),
+    [graphLayout, elements.length],
+  );
+
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}>
@@ -119,7 +128,6 @@ export function ADGraphExplorerPage({ assessmentId }: Props) {
   }
   if (error) return <Alert severity="error">Failed to load graph data</Alert>;
 
-  const elements = [...(data?.nodes ?? []), ...(data?.edges ?? [])];
   if (elements.length === 0) {
     return (
       <Box>
@@ -184,7 +192,7 @@ export function ADGraphExplorerPage({ assessmentId }: Props) {
             elements={elements}
             style={{ width: '100%', height: '100%' }}
             stylesheet={CYTOSCAPE_STYLESHEET}
-            layout={getLayoutConfig(graphLayout, elements.length)}
+            layout={layoutConfig}
             cy={handleCyReady}
             wheelSensitivity={0.2}
           />
