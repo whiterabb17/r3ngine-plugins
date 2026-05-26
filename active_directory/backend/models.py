@@ -178,3 +178,26 @@ class ADGraphSnapshot(models.Model):
 
     def __str__(self):
         return f"{self.snapshot_type} @ {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class ADEvidenceLog(models.Model):
+    """Immutable audit record of analyst actions on an assessment."""
+    assessment = models.ForeignKey(
+        ADAssessment, on_delete=models.CASCADE, related_name='evidence_logs')
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='+',
+    )
+    action = models.CharField(max_length=100)
+    detail = models.JSONField(default=dict)
+    timestamp = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'plugin_ad_evidence_log'
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"[{self.assessment_id}] {self.action} @ {self.timestamp}"
