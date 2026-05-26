@@ -4,8 +4,10 @@ import logging
 import os
 import uuid
 
+from django.db import models
 from django.utils import timezone
 from rest_framework import status, viewsets
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
@@ -13,6 +15,7 @@ from rest_framework.response import Response
 
 from .models import (ADAssessment, ADDomain, ADExposure, ADFinding,
                      ADGraphSnapshot, ADTrust)
+from .permissions import IsAssessmentOwnerOrAdmin
 from .serializers import (ADAssessmentCreateSerializer,
                           ADAssessmentDetailSerializer,
                           ADAssessmentListSerializer, ADExposureSerializer,
@@ -38,6 +41,23 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
         if self.action in ('retrieve', 'update', 'partial_update'):
             return ADAssessmentDetailSerializer
         return ADAssessmentListSerializer
+
+    def get_permissions(self):
+        if self.action in ('update', 'partial_update', 'destroy',
+                           'start', 'cancel', 'ingest'):
+            return [IsAuthenticated(), IsAssessmentOwnerOrAdmin()]
+        return [IsAuthenticated()]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return ADAssessment.objects.all()
+        return ADAssessment.objects.filter(
+            models.Q(created_by=user) | models.Q(created_by__isnull=True)
+        )
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
 
     # ------------------------------------------------------------------
     # Start / Cancel
