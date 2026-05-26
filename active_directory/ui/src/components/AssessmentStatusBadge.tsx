@@ -3,7 +3,8 @@ import { Chip } from '@mui/material';
 const STATUS_COLORS: Record<string, 'default' | 'warning' | 'info' | 'success' | 'error'> = {
   PENDING: 'default',
   RUNNING: 'info',
-  SUCCESS: 'success',
+  PAUSED: 'warning',
+  COMPLETED: 'success',
   FAILED: 'error',
   CANCELLED: 'warning',
 };

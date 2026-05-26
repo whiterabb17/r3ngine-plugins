@@ -2,7 +2,7 @@ export interface ADAssessment {
   id: number;
   name: string;
   target_domain: string;
-  status: 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'CANCELLED';
+  status: 'PENDING' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
   created_at: string;
   completed_at: string | null;
   workflow_id: string | null;

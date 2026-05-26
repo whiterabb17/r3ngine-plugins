@@ -91,8 +91,9 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
         try:
             wf_id = self._start_workflow(assessment, workflow_id)
             assessment.workflow_id = wf_id
-            assessment.status = 'PENDING'
-            assessment.save(update_fields=['workflow_id', 'status'])
+            assessment.status = 'RUNNING'
+            assessment.started_at = timezone.now()
+            assessment.save(update_fields=['workflow_id', 'status', 'started_at'])
             ADAssessmentViewSet._log_analyst_action(assessment, request, 'start_assessment')
             return Response({'workflow_id': wf_id, 'status': 'started'})
         except Exception as exc:

@@ -3,10 +3,14 @@ import type { ADAssessment, ADFinding, ADTrust, ADExposure, CytoscapeGraph, ADEv
 
 const API_BASE = '/api/plugins/active_directory/assessments';
 
+function getCsrfToken(): string {
+  return document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] ?? '';
+}
+
 async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken(), ...options?.headers },
     ...options,
   });
   if (!res.ok) throw new Error(`API error ${res.status}`);
@@ -176,6 +180,7 @@ export function useIngestData() {
       return fetch(`${API_BASE}/${assessmentId}/ingest/`, {
         method: 'POST',
         credentials: 'include',
+        headers: { 'X-CSRFToken': getCsrfToken() },
         body: fd,
       }).then(r => {
         if (!r.ok) throw new Error(`Ingest error ${r.status}`);
