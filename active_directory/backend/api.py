@@ -270,6 +270,9 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
         """
         assessment = self.get_object()
         fmt = request.query_params.get('format', 'json').lower()
+        template = request.query_params.get('template', 'standard').lower()
+        if template not in ('standard', 'modern', 'cyber_pro'):
+            template = 'standard'
         try:
             from .reporting.engine import ReportingEngine
             compiled = ReportingEngine.compile(assessment.id)
@@ -278,12 +281,12 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
             if fmt == 'pdf':
                 from .reporting.pdf_renderer import PDFRenderer
                 from django.http import HttpResponse
-                pdf_bytes = PDFRenderer.render(compiled)
+                pdf_bytes = PDFRenderer.render(compiled, template=template)
                 filename = f"ad-report-{assessment.id}-{safe_domain}.pdf"
                 response = HttpResponse(pdf_bytes, content_type='application/pdf')
                 response['Content-Disposition'] = f'attachment; filename="{filename}"'
                 ADAssessmentViewSet._log_analyst_action(
-                    assessment, request, 'generate_report', {'format': fmt}
+                    assessment, request, 'generate_report', {'format': fmt, 'template': template}
                 )
                 return response
             else:

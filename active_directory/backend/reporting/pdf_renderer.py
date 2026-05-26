@@ -136,9 +136,19 @@ def _build_html(report: dict) -> str:
 </html>"""
 
 
+def _build_html_from_template(report: dict, template_name: str) -> str:
+    from django.template.loader import render_to_string
+    return render_to_string(f'report/{template_name}.html', {'report': report})
+
+
 class PDFRenderer:
+    SUPPORTED_TEMPLATES = frozenset({'standard', 'modern', 'cyber_pro'})
+
     @staticmethod
-    def render(report: dict) -> bytes:
+    def render(report: dict, template: str = 'standard') -> bytes:
         from weasyprint import HTML
-        html_content = _build_html(report)
+        if template in PDFRenderer.SUPPORTED_TEMPLATES and template != 'standard':
+            html_content = _build_html_from_template(report, f'ad_{template}')
+        else:
+            html_content = _build_html(report)
         return HTML(string=html_content).write_pdf()
