@@ -4,6 +4,7 @@ import {
   TableRow, TableCell, Chip, CircularProgress, Alert
 } from '@mui/material';
 import { useTrusts } from '../api/adApi';
+import { useAnalyticsStore } from '../store/analyticsStore';
 
 interface Props {
   assessmentId: number;
@@ -12,9 +13,14 @@ interface Props {
 export function ADTrustAnalyticsPage({ assessmentId }: Props) {
   const { data: trusts, isLoading, error } = useTrusts(assessmentId);
 
+  const { trustDirectionFilter, setTrustDirectionFilter } = useAnalyticsStore();
+
   if (isLoading) return <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}><CircularProgress /></Box>;
   if (error) return <Alert severity="error">Failed to load trust data</Alert>;
   const trustList = trusts?.results ?? [];
+  const filteredTrusts = trustDirectionFilter
+    ? trustList.filter((t) => t.direction === trustDirectionFilter)
+    : trustList;
 
   if (!trustList.length) return (
     <Box>
@@ -26,6 +32,19 @@ export function ADTrustAnalyticsPage({ assessmentId }: Props) {
   return (
     <Box>
       <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 2 }}>TRUST ANALYTICS</Typography>
+      <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+        {[null, 'INBOUND', 'OUTBOUND', 'BIDIRECTIONAL'].map((dir) => (
+          <Chip
+            key={dir ?? 'all'}
+            label={dir ?? 'ALL'}
+            size="small"
+            clickable
+            color={trustDirectionFilter === dir ? 'primary' : 'default'}
+            onClick={() => setTrustDirectionFilter(dir)}
+            sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}
+          />
+        ))}
+      </Box>
       <Table size="small">
         <TableHead>
           <TableRow>
@@ -38,7 +57,7 @@ export function ADTrustAnalyticsPage({ assessmentId }: Props) {
           </TableRow>
         </TableHead>
         <TableBody>
-          {trustList.map((t) => (
+          {filteredTrusts.map((t) => (
             <TableRow key={t.id} hover>
               <TableCell sx={{ fontFamily: 'monospace' }}>{t.source_domain_fqdn}</TableCell>
               <TableCell sx={{ fontFamily: 'monospace' }}>{t.target_domain_name}</TableCell>

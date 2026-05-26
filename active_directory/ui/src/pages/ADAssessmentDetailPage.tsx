@@ -10,6 +10,7 @@ import { AssessmentStatusBadge } from '../components/AssessmentStatusBadge';
 import { IngestDataDialog } from '../components/IngestDataDialog';
 import { WorkflowProgressPanel } from '../components/WorkflowProgressPanel';
 import { useWsEventBus } from '../hooks/useWsEventBus';
+import { useAnalyticsStore } from '../store/analyticsStore';
 
 interface Props {
   assessmentId: number;
@@ -26,11 +27,17 @@ export function ADAssessmentDetailPage({ assessmentId, onNavigate }: Props) {
   const [ingestOpen, setIngestOpen] = useState(false);
   const [logPage, setLogPage] = useState(1);
 
-  useEffect(() => { setFindingsPage(1); }, [assessmentId]);
-  useEffect(() => { setLogPage(1); }, [assessmentId]);
+  const { findingsSeverityFilter, setFindingsSeverityFilter } = useAnalyticsStore();
+
+  useEffect(() => {
+    useAnalyticsStore.getState().resetFilters();
+    setFindingsPage(1);
+    setLogPage(1);
+  }, [assessmentId]);
+
   const { data: logData } = useEvidenceLog(assessmentId, logPage);
   const { data: assessment, isLoading } = useAssessment(assessmentId);
-  const { data: findingsData } = useFindings(assessmentId, undefined, findingsPage);
+  const { data: findingsData } = useFindings(assessmentId, findingsSeverityFilter ?? undefined, findingsPage);
   const { mutate: cancel } = useCancelAssessment();
 
   // Connect WebSocket when assessment is running; batched events → realtimeStore
@@ -80,6 +87,19 @@ export function ADAssessmentDetailPage({ assessmentId, onNavigate }: Props) {
 
       {tab === 0 && (
         <Box>
+          <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+            {[null, 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].map((sev) => (
+              <Chip
+                key={sev ?? 'all'}
+                label={sev ?? 'ALL'}
+                size="small"
+                clickable
+                color={findingsSeverityFilter === sev ? 'primary' : 'default'}
+                onClick={() => { setFindingsSeverityFilter(sev); setFindingsPage(1); }}
+                sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}
+              />
+            ))}
+          </Box>
           <Table size="small">
             <TableHead>
               <TableRow>

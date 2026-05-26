@@ -5,6 +5,7 @@ import {
   LinearProgress
 } from '@mui/material';
 import { useExposures } from '../api/adApi';
+import { useAnalyticsStore } from '../store/analyticsStore';
 
 interface Props {
   assessmentId: number;
@@ -34,10 +35,15 @@ function RiskBar({ score }: { score: number }) {
 
 export function ADExposureDashboardPage({ assessmentId }: Props) {
   const { data: exposures, isLoading, error } = useExposures(assessmentId);
+  const { exposureTypeFilter, setExposureTypeFilter } = useAnalyticsStore();
 
   if (isLoading) return <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}><CircularProgress /></Box>;
   if (error) return <Alert severity="error">Failed to load exposure data</Alert>;
   const exposureList = exposures?.results ?? [];
+  const allTypes = [...new Set(exposureList.map((e) => e.exposure_type))].sort();
+  const filteredExposures = exposureTypeFilter
+    ? exposureList.filter((e) => e.exposure_type === exposureTypeFilter)
+    : exposureList;
 
   if (!exposureList.length) return (
     <Box>
@@ -46,11 +52,32 @@ export function ADExposureDashboardPage({ assessmentId }: Props) {
     </Box>
   );
 
-  const sorted = [...exposureList].sort((a, b) => b.risk_score - a.risk_score);
+  const sorted = [...filteredExposures].sort((a, b) => b.risk_score - a.risk_score);
 
   return (
     <Box>
       <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 2 }}>EXPOSURE DASHBOARD</Typography>
+      <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+        <Chip
+          label="ALL"
+          size="small"
+          clickable
+          color={exposureTypeFilter === null ? 'primary' : 'default'}
+          onClick={() => setExposureTypeFilter(null)}
+          sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}
+        />
+        {allTypes.map((type) => (
+          <Chip
+            key={type}
+            label={type}
+            size="small"
+            clickable
+            color={exposureTypeFilter === type ? 'primary' : 'default'}
+            onClick={() => setExposureTypeFilter(type)}
+            sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}
+          />
+        ))}
+      </Box>
       <Table size="small">
         <TableHead>
           <TableRow>
