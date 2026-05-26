@@ -48,6 +48,15 @@ export interface ADExposure {
   created_at: string;
 }
 
+export interface ADEvidenceLogEntry {
+  id: number;
+  action: string;
+  detail: Record<string, unknown>;
+  timestamp: string;
+  actor: number | null;
+  actor_username: string | null;
+}
+
 export interface CytoscapeGraph {
   nodes: Array<{ data: Record<string, unknown> }>;
   edges: Array<{ data: Record<string, unknown> }>;

@@ -13,14 +13,14 @@ from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
-from .models import (ADAssessment, ADDomain, ADExposure, ADFinding,
+from .models import (ADAssessment, ADDomain, ADEvidenceLog, ADExposure, ADFinding,
                      ADGraphSnapshot, ADTrust)
 from .permissions import IsAssessmentOwnerOrAdmin
 from .serializers import (ADAssessmentCreateSerializer,
                           ADAssessmentDetailSerializer,
-                          ADAssessmentListSerializer, ADExposureSerializer,
-                          ADFindingSerializer, ADGraphSnapshotSerializer,
-                          ADTrustSerializer)
+                          ADAssessmentListSerializer, ADEvidenceLogSerializer,
+                          ADExposureSerializer, ADFindingSerializer,
+                          ADGraphSnapshotSerializer, ADTrustSerializer)
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +60,19 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
         serializer.save(created_by=self.request.user)
 
     # ------------------------------------------------------------------
+    # Analyst action logging
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _log_analyst_action(assessment, request, action: str, detail: dict = None):
+        ADEvidenceLog.objects.create(
+            assessment=assessment,
+            actor=request.user if request.user.is_authenticated else None,
+            action=action,
+            detail=detail or {},
+        )
+
+    # ------------------------------------------------------------------
     # Start / Cancel
     # ------------------------------------------------------------------
 
@@ -80,6 +93,7 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
             assessment.workflow_id = wf_id
             assessment.status = 'PENDING'
             assessment.save(update_fields=['workflow_id', 'status'])
+            ADAssessmentViewSet._log_analyst_action(assessment, request, 'start_assessment')
             return Response({'workflow_id': wf_id, 'status': 'started'})
         except Exception as exc:
             logger.error(f"[AD API] Failed to start workflow: {exc}")
@@ -126,6 +140,7 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
             assessment.status = 'CANCELLED'
             assessment.completed_at = timezone.now()
             assessment.save(update_fields=['status', 'completed_at'])
+            ADAssessmentViewSet._log_analyst_action(assessment, request, 'cancel_assessment')
             return Response({'status': 'cancelled'})
         except Exception as exc:
             return Response(
@@ -258,6 +273,9 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
         try:
             from .reporting.engine import ReportingEngine
             compiled = ReportingEngine.compile(assessment.id)
+            ADAssessmentViewSet._log_analyst_action(
+                assessment, request, 'generate_report', {'format': fmt}
+            )
             import re
             safe_domain = re.sub(r'[^\w.\-]', '_', assessment.target_domain)
             if fmt == 'pdf':
@@ -316,12 +334,27 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
             if tmp_path and _os.path.exists(tmp_path):
                 _os.remove(tmp_path)
 
+        ADAssessmentViewSet._log_analyst_action(
+            assessment, request, 'ingest_data',
+            {'file': uploaded.name, 'type': ingest_type},
+        )
         return Response({
             'status': 'completed',
             'file': uploaded.name,
             'type': ingest_type,
             'summary': summary,
         })
+
+    @action(detail=True, methods=['get'], url_path='evidence-log')
+    def evidence_log(self, request, pk=None):
+        assessment = self.get_object()
+        qs = assessment.evidence_logs.all()
+        paginator = ADPageNumberPagination()
+        page = paginator.paginate_queryset(qs, request)
+        if page is not None:
+            return paginator.get_paginated_response(
+                ADEvidenceLogSerializer(page, many=True).data)
+        return Response(ADEvidenceLogSerializer(qs, many=True).data)
 
     @staticmethod
     def _run_ingestion(ingest_type: str, file_path: str, assessment_id: int) -> dict:

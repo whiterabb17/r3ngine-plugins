@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { ADAssessment, ADFinding, ADTrust, ADExposure, CytoscapeGraph } from '../types';
+import type { ADAssessment, ADFinding, ADTrust, ADExposure, CytoscapeGraph, ADEvidenceLogEntry } from '../types';
 
 const API_BASE = '/api/plugins/active_directory/assessments';
 
@@ -140,6 +140,19 @@ export function useGenerateReport() {
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 100);
     },
+  });
+}
+
+export function useEvidenceLog(assessmentId: number, page = 1) {
+  return useQuery({
+    queryKey: ['ad', 'assessments', assessmentId, 'evidence-log', page],
+    queryFn: () => {
+      const params = new URLSearchParams({ page: String(page) });
+      return apiFetch<PaginatedResponse<ADEvidenceLogEntry>>(
+        `${API_BASE}/${assessmentId}/evidence-log/?${params}`
+      );
+    },
+    enabled: !!assessmentId,
   });
 }
 

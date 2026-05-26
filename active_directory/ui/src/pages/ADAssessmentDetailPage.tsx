@@ -4,7 +4,8 @@ import {
   TableBody, TableRow, TableCell, Chip, CircularProgress,
 } from '@mui/material';
 import { Upload, XCircle } from 'lucide-react';
-import { useAssessment, useFindings, useCancelAssessment } from '../api/adApi';
+import { useAssessment, useFindings, useCancelAssessment, useEvidenceLog } from '../api/adApi';
+import type { ADEvidenceLogEntry } from '../types';
 import { AssessmentStatusBadge } from '../components/AssessmentStatusBadge';
 import { IngestDataDialog } from '../components/IngestDataDialog';
 import { WorkflowProgressPanel } from '../components/WorkflowProgressPanel';
@@ -23,8 +24,11 @@ export function ADAssessmentDetailPage({ assessmentId, onNavigate }: Props) {
   const [tab, setTab] = useState(0);
   const [findingsPage, setFindingsPage] = useState(1);
   const [ingestOpen, setIngestOpen] = useState(false);
+  const [logPage, setLogPage] = useState(1);
 
   useEffect(() => { setFindingsPage(1); }, [assessmentId]);
+  useEffect(() => { setLogPage(1); }, [assessmentId]);
+  const { data: logData } = useEvidenceLog(assessmentId, logPage);
   const { data: assessment, isLoading } = useAssessment(assessmentId);
   const { data: findingsData } = useFindings(assessmentId, undefined, findingsPage);
   const { mutate: cancel } = useCancelAssessment();
@@ -71,6 +75,7 @@ export function ADAssessmentDetailPage({ assessmentId, onNavigate }: Props) {
         <Tab label="Findings" />
         <Tab label="Trusts" />
         <Tab label="Exposures" />
+        <Tab label="Evidence Log" />
       </Tabs>
 
       {tab === 0 && (
@@ -110,6 +115,51 @@ export function ADAssessmentDetailPage({ assessmentId, onNavigate }: Props) {
                 onClick={() => setFindingsPage((p) => p + 1)}>
                 Next
               </Button>
+            </Box>
+          )}
+        </Box>
+      )}
+
+      {tab === 3 && (
+        <Box>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontFamily: 'Orbitron', fontSize: '0.68rem' }}>TIMESTAMP</TableCell>
+                <TableCell sx={{ fontFamily: 'Orbitron', fontSize: '0.68rem' }}>ACTION</TableCell>
+                <TableCell sx={{ fontFamily: 'Orbitron', fontSize: '0.68rem' }}>ACTOR</TableCell>
+                <TableCell sx={{ fontFamily: 'Orbitron', fontSize: '0.68rem' }}>DETAIL</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {(logData?.results ?? []).map((entry: ADEvidenceLogEntry) => (
+                <TableRow key={entry.id}>
+                  <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                    {entry.timestamp.slice(0, 19).replace('T', ' ')}
+                  </TableCell>
+                  <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{entry.action}</TableCell>
+                  <TableCell sx={{ fontSize: '0.8rem' }}>{entry.actor_username ?? '—'}</TableCell>
+                  <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                    {Object.keys(entry.detail).length > 0 ? JSON.stringify(entry.detail) : '—'}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {(logData?.results ?? []).length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+                    No evidence log entries.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+          {(logData?.count ?? 0) > 50 && (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
+              <Button size="small" disabled={!logData?.previous} onClick={() => setLogPage((p) => p - 1)}>Prev</Button>
+              <Typography variant="caption" sx={{ alignSelf: 'center', color: 'text.secondary' }}>
+                Page {logPage} · {logData?.count ?? 0} total
+              </Typography>
+              <Button size="small" disabled={!logData?.next} onClick={() => setLogPage((p) => p + 1)}>Next</Button>
             </Box>
           )}
         </Box>
