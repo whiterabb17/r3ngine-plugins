@@ -27,13 +27,13 @@ export function ADAssessmentDetailPage({ assessmentId, onNavigate }: Props) {
   const [ingestOpen, setIngestOpen] = useState(false);
   const [logPage, setLogPage] = useState(1);
 
-  const { findingsSeverityFilter, setFindingsSeverityFilter } = useAnalyticsStore();
+  const { findingsSeverityFilter, setFindingsSeverityFilter, resetFilters } = useAnalyticsStore();
 
   useEffect(() => {
-    useAnalyticsStore.getState().resetFilters();
+    resetFilters();
     setFindingsPage(1);
     setLogPage(1);
-  }, [assessmentId]);
+  }, [assessmentId, resetFilters]);
 
   const { data: logData } = useEvidenceLog(assessmentId, logPage);
   const { data: assessment, isLoading } = useAssessment(assessmentId);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Box, Typography, Table, TableHead, TableBody,
   TableRow, TableCell, Chip, CircularProgress, Alert,
@@ -40,7 +40,10 @@ export function ADExposureDashboardPage({ assessmentId }: Props) {
   if (isLoading) return <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}><CircularProgress /></Box>;
   if (error) return <Alert severity="error">Failed to load exposure data</Alert>;
   const exposureList = exposures?.results ?? [];
-  const allTypes = [...new Set(exposureList.map((e) => e.exposure_type))].sort();
+  const allTypes = useMemo(
+    () => [...new Set(exposureList.map((e) => e.exposure_type))].sort(),
+    [exposureList],
+  );
   const filteredExposures = exposureTypeFilter
     ? exposureList.filter((e) => e.exposure_type === exposureTypeFilter)
     : exposureList;
