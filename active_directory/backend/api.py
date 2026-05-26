@@ -273,9 +273,6 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
         try:
             from .reporting.engine import ReportingEngine
             compiled = ReportingEngine.compile(assessment.id)
-            ADAssessmentViewSet._log_analyst_action(
-                assessment, request, 'generate_report', {'format': fmt}
-            )
             import re
             safe_domain = re.sub(r'[^\w.\-]', '_', assessment.target_domain)
             if fmt == 'pdf':
@@ -285,6 +282,9 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
                 filename = f"ad-report-{assessment.id}-{safe_domain}.pdf"
                 response = HttpResponse(pdf_bytes, content_type='application/pdf')
                 response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                ADAssessmentViewSet._log_analyst_action(
+                    assessment, request, 'generate_report', {'format': fmt}
+                )
                 return response
             else:
                 from .reporting.json_renderer import JSONRenderer
@@ -293,6 +293,9 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
                 filename = f"ad-report-{assessment.id}-{safe_domain}.json"
                 response = HttpResponse(json_bytes, content_type='application/json')
                 response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                ADAssessmentViewSet._log_analyst_action(
+                    assessment, request, 'generate_report', {'format': fmt}
+                )
                 return response
         except Exception as exc:
             logger.error(f"[AD Report] Generation failed: {exc}")
@@ -336,7 +339,11 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
 
         ADAssessmentViewSet._log_analyst_action(
             assessment, request, 'ingest_data',
-            {'file': uploaded.name, 'type': ingest_type},
+            {
+                'file': uploaded.name,
+                'type': ingest_type,
+                'success': 'error' not in summary,
+            },
         )
         return Response({
             'status': 'completed',
