@@ -6,7 +6,7 @@ import sys
 
 logger = get_task_logger(__name__)
 
-@app.task(name='exploit_readiness_layer_run', base=RengineTask, bind=True)
+@app.task(name='erl_celery_run', base=RengineTask, bind=True)
 def run(self, ctx):
     """
     Plugin-based ERL validation task.

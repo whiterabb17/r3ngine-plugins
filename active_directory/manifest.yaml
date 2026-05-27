@@ -22,5 +22,5 @@ temporal:
 
 ui:
   menu_item: "AD Intelligence"
-  menu_path: "/active-directory"
+  menu_path: "/p/active-directory"
   entry_export: "ADPluginApp"
