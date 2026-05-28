@@ -14,13 +14,14 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
 from .models import (ADAssessment, ADDomain, ADEvidenceLog, ADExposure, ADFinding,
-                     ADGraphSnapshot, ADTrust)
+                     ADGraphSnapshot, ADTrust, ADPluginConfig)
 from .permissions import IsAssessmentOwnerOrAdmin
 from .serializers import (ADAssessmentCreateSerializer,
                           ADAssessmentDetailSerializer,
                           ADAssessmentListSerializer, ADEvidenceLogSerializer,
                           ADExposureSerializer, ADFindingSerializer,
-                          ADGraphSnapshotSerializer, ADTrustSerializer)
+                          ADGraphSnapshotSerializer, ADTrustSerializer,
+                          ADPluginConfigSerializer)
 
 logger = logging.getLogger(__name__)
 
@@ -410,3 +411,49 @@ class ADAssessmentViewSet(viewsets.ModelViewSet):
             return BloodHoundParser.ingest_from_directory(directory, assessment_id)
 
         return {'warning': f'Unknown ingest type: {ingest_type}. Supported: ldap, bloodhound'}
+
+    @action(detail=True, methods=['get'], url_path='attack-paths')
+    def attack_paths(self, request, pk=None):
+        assessment = self.get_object()
+        category = request.query_params.get('category')
+        valid = {'da_paths', 'kerberoastable', 'asreproastable',
+                 'unconstrained_delegation', 'acl_abuse'}
+        if category not in valid:
+            return Response(
+                {'error': f'category must be one of {sorted(valid)}'},
+                status=status.HTTP_400_BAD_REQUEST)
+        method_map = {
+            'da_paths': 'find_da_paths',
+            'kerberoastable': 'find_kerberoastable',
+            'asreproastable': 'find_asreproastable',
+            'unconstrained_delegation': 'find_unconstrained_delegation',
+            'acl_abuse': 'find_acl_abuse',
+        }
+        try:
+            from .graph.manager import ADGraphManager
+            max_hops = int(ADPluginConfig.get_setting('max_path_length', 10))
+            kwargs = {'max_hops': max_hops} if category == 'da_paths' else {}
+            with ADGraphManager() as mgr:
+                results = getattr(mgr, method_map[category])(assessment.id, **kwargs)
+            return Response({'results': results, 'count': len(results)})
+        except Exception as exc:
+            logger.error(f"[AD API] attack_paths failed: {exc}")
+            return Response({'results': [], 'error': str(exc), 'count': 0})
+
+
+from rest_framework.views import APIView
+
+
+class ADPluginConfigView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        cfg = ADPluginConfig.get()
+        return Response(ADPluginConfigSerializer(cfg).data)
+
+    def put(self, request):
+        cfg = ADPluginConfig.get()
+        serializer = ADPluginConfigSerializer(cfg, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
