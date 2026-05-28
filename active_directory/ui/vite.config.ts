@@ -8,7 +8,6 @@ const globals = {
   '@mui/material/styles': 'window.MaterialUIStyles',
   '@mui/icons-material': 'window.MaterialUIIcons',
   'lucide-react': 'window.LucideReact',
-  'cytoscape': 'window.Cytoscape'
 };
 
 function externalGlobalsPlugin(globals: Record<string, string>) {
