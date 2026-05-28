@@ -27,7 +27,8 @@ export interface PaginatedResponse<T> {
 export function useAssessments() {
   return useQuery({
     queryKey: ['ad', 'assessments'],
-    queryFn: () => apiFetch<ADAssessment[]>(`${API_BASE}/`),
+    queryFn: () => apiFetch<PaginatedResponse<ADAssessment>>(`${API_BASE}/`),
+    select: (data) => data.results,
   });
 }
 
