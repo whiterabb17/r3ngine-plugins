@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { ADAssessment, ADFinding, ADTrust, ADExposure, CytoscapeGraph, ADEvidenceLogEntry } from '../types';
+import type { ADAssessment, ADFinding, ADTrust, ADExposure, CytoscapeGraph, ADEvidenceLogEntry, ADPluginConfig } from '../types';
 
 const API_BASE = '/api/plugins/active_directory/assessments';
+const CONFIG_BASE = '/api/plugins/active_directory/config';
 
 function getCsrfToken(): string {
   return document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] ?? '';
@@ -188,6 +189,50 @@ export function useIngestData() {
         return r.json();
       });
     },
+    onSuccess: (_data, { assessmentId }) => {
+      qc.invalidateQueries({ queryKey: ['ad', 'assessments', assessmentId] });
+    },
+  });
+}
+
+export function useAttackPaths(assessmentId: number, category: string) {
+  return useQuery({
+    queryKey: ['ad', 'assessments', assessmentId, 'attack-paths', category],
+    queryFn: () =>
+      apiFetch<{ results: unknown[]; count: number; error?: string }>(
+        `${API_BASE}/${assessmentId}/attack-paths/?category=${category}`
+      ),
+    enabled: !!assessmentId && !!category,
+  });
+}
+
+export function usePluginConfig() {
+  return useQuery({
+    queryKey: ['ad', 'plugin-config'],
+    queryFn: () => apiFetch<ADPluginConfig>(`${CONFIG_BASE}/`),
+  });
+}
+
+export function useUpdatePluginConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<ADPluginConfig>) =>
+      apiFetch<ADPluginConfig>(`${CONFIG_BASE}/`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ad', 'plugin-config'] }),
+  });
+}
+
+export function useUpdateAssessmentConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ assessmentId, config }: { assessmentId: number; config: Record<string, unknown> }) =>
+      apiFetch<ADAssessment>(`${API_BASE}/${assessmentId}/`, {
+        method: 'PATCH',
+        body: JSON.stringify({ config }),
+      }),
     onSuccess: (_data, { assessmentId }) => {
       qc.invalidateQueries({ queryKey: ['ad', 'assessments', assessmentId] });
     },

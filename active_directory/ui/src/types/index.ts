@@ -122,6 +122,20 @@ export interface WSMessage {
   payload: Record<string, unknown>;
 }
 
+export interface ADPluginConfig {
+  id: number;
+  neo4j_bolt_url: string;
+  max_path_length: number;
+  bloodhound_ce_url: string;
+  default_phases: string[];
+}
+
+export interface AttackPathsResult {
+  results: unknown[];
+  count: number;
+  error?: string;
+}
+
 export interface ADReport {
   metadata: {
     report_id: string;
