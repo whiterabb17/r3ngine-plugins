@@ -201,3 +201,23 @@ class ADEvidenceLog(models.Model):
 
     def __str__(self):
         return f"[{self.assessment_id}] {self.action} @ {self.timestamp}"
+
+
+class ADPluginConfig(models.Model):
+    """Singleton configuration for the AD plugin."""
+    neo4j_bolt_url = models.CharField(max_length=500, blank=True, default='')
+    max_path_length = models.IntegerField(default=10)
+    bloodhound_ce_url = models.CharField(max_length=500, blank=True, default='')
+    default_phases = models.JSONField(default=list)
+
+    class Meta:
+        db_table = 'plugin_ad_config'
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    @classmethod
+    def get_setting(cls, key, default=None):
+        return getattr(cls.get(), key, default)
