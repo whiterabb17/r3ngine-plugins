@@ -203,6 +203,38 @@ class ADGraphManager:
                 aid=assessment_id,
             )
 
+    ALLOWED_ACL_RELS = {
+        'AD_GENERIC_ALL', 'AD_WRITE_DACL', 'AD_WRITE_OWNER',
+        'AD_FORCE_CHANGE_PW', 'AD_HAS_SESSION', 'AD_ADMIN_TO',
+        'AD_ALLOWED_TO_DELEGATE',
+    }
+
+    ALLOWED_TARGET_LABELS = {'ADUser', 'ADGroup', 'ADComputer'}
+
+    def create_acl_edge(
+            self, source_sid: str, target_sid: str,
+            target_type: str, rel_type: str, assessment_id: int) -> None:
+        """MERGE an ACL relationship between two AD nodes by SID."""
+        if rel_type not in self.ALLOWED_ACL_RELS:
+            raise ValueError(f"Invalid ACL rel_type: {rel_type!r}")
+        label = f"AD{target_type}" if not target_type.startswith('AD') else target_type
+        if label not in self.ALLOWED_TARGET_LABELS:
+            label = 'ADUser'
+        with self._driver.session() as session:
+            session.run(
+                f"""
+                MATCH (src {{sid: $src_sid, assessment_id: $aid}})
+                MATCH (tgt:{label} {{sid: $tgt_sid, assessment_id: $aid}})
+                MERGE (src)-[r:{rel_type}]->(tgt)
+                SET r.assessment_id = $aid,
+                    r.source_sid = $src_sid,
+                    r.target_sid = $tgt_sid
+                """,
+                src_sid=source_sid,
+                tgt_sid=target_sid,
+                aid=assessment_id,
+            )
+
     # ------------------------------------------------------------------
     # Graph queries
     # ------------------------------------------------------------------
@@ -327,3 +359,152 @@ class ADGraphManager:
             )
             record = result.single()
             return record['path_nodes'] if record else []
+
+    # ------------------------------------------------------------------
+    # Attack path queries
+    # ------------------------------------------------------------------
+
+    def find_da_paths(self, assessment_id: int, max_hops: int = 10) -> List[Dict]:
+        """Shortest paths from non-admin users to Domain Admins group."""
+        try:
+            with self._driver.session() as session:
+                result = session.run(
+                    f"""
+                    MATCH (u:{s.ADUserNode} {{assessment_id: $aid, admin_count: 0, enabled: true}})
+                    MATCH (g:{s.ADGroupNode} {{assessment_id: $aid, admin_group: true}})
+                      WHERE toLower(g.name) CONTAINS 'domain admins'
+                    MATCH p = shortestPath((u)-[:AD_MEMBER_OF|AD_GENERIC_ALL|AD_WRITE_DACL|
+                      AD_WRITE_OWNER|AD_FORCE_CHANGE_PW|AD_ADMIN_TO*1..{max_hops}]->(g))
+                    RETURN u.sam_account_name AS source, g.name AS target,
+                           length(p) AS path_length,
+                           [n IN nodes(p) | {{id: id(n),
+                             label: coalesce(n.sam_account_name, n.name, n.fqdn),
+                             type: labels(n)[0]}}] AS hops
+                    ORDER BY path_length ASC LIMIT 50
+                    """,
+                    aid=assessment_id,
+                )
+                return [
+                    {
+                        'source': r['source'],
+                        'target': r['target'],
+                        'path_length': r['path_length'],
+                        'hops': r['hops'],
+                    }
+                    for r in result
+                ]
+        except Exception as exc:
+            logger.warning(f"[ADGraph] find_da_paths failed: {exc}")
+            return []
+
+    def find_kerberoastable(self, assessment_id: int) -> List[Dict]:
+        """Return users with SPNs (Kerberoastable)."""
+        try:
+            with self._driver.session() as session:
+                result = session.run(
+                    f"""
+                    MATCH (u:{s.ADUserNode} {{assessment_id: $aid, kerberoastable: true, enabled: true}})
+                    RETURN u.sid AS sid, u.sam_account_name AS sam_account_name,
+                           u.spn AS spn, u.admin_count AS admin_count
+                    ORDER BY u.admin_count DESC
+                    """,
+                    aid=assessment_id,
+                )
+                return [
+                    {
+                        'sid': r['sid'],
+                        'sam_account_name': r['sam_account_name'],
+                        'spn': r['spn'],
+                        'admin_count': r['admin_count'],
+                    }
+                    for r in result
+                ]
+        except Exception as exc:
+            logger.warning(f"[ADGraph] find_kerberoastable failed: {exc}")
+            return []
+
+    def find_asreproastable(self, assessment_id: int) -> List[Dict]:
+        """Return users with dont_req_preauth=true (AS-REP Roastable)."""
+        try:
+            with self._driver.session() as session:
+                result = session.run(
+                    f"""
+                    MATCH (u:{s.ADUserNode} {{assessment_id: $aid,
+                           dont_req_preauth: true, enabled: true}})
+                    RETURN u.sid AS sid, u.sam_account_name AS sam_account_name,
+                           u.admin_count AS admin_count
+                    ORDER BY u.admin_count DESC
+                    """,
+                    aid=assessment_id,
+                )
+                return [
+                    {
+                        'sid': r['sid'],
+                        'sam_account_name': r['sam_account_name'],
+                        'admin_count': r['admin_count'],
+                    }
+                    for r in result
+                ]
+        except Exception as exc:
+            logger.warning(f"[ADGraph] find_asreproastable failed: {exc}")
+            return []
+
+    def find_unconstrained_delegation(self, assessment_id: int) -> List[Dict]:
+        """Return computers with unconstrained Kerberos delegation."""
+        try:
+            with self._driver.session() as session:
+                result = session.run(
+                    f"""
+                    MATCH (c:{s.ADComputerNode} {{assessment_id: $aid,
+                           unconstrained_delegation: true, enabled: true}})
+                    RETURN c.sid AS sid, c.name AS name, c.fqdn AS fqdn,
+                           c.constrained_delegation_targets AS delegation_targets
+                    """,
+                    aid=assessment_id,
+                )
+                return [
+                    {
+                        'sid': r['sid'],
+                        'name': r['name'],
+                        'fqdn': r['fqdn'],
+                        'delegation_targets': r['delegation_targets'] or [],
+                    }
+                    for r in result
+                ]
+        except Exception as exc:
+            logger.warning(f"[ADGraph] find_unconstrained_delegation failed: {exc}")
+            return []
+
+    def find_acl_abuse(self, assessment_id: int) -> List[Dict]:
+        """Return non-admin users with dangerous ACL rights over admin objects."""
+        try:
+            with self._driver.session() as session:
+                result = session.run(
+                    f"""
+                    MATCH (u:{s.ADUserNode} {{assessment_id: $aid, admin_count: 0, enabled: true}})
+                          -[r:AD_GENERIC_ALL|AD_WRITE_DACL|AD_WRITE_OWNER|AD_FORCE_CHANGE_PW]->(t)
+                      WHERE (t:{s.ADGroupNode} AND t.admin_group = true)
+                         OR (t:{s.ADUserNode} AND t.admin_count > 0)
+                    RETURN u.sid AS source_sid, u.sam_account_name AS source_name,
+                           type(r) AS edge_type,
+                           t.sid AS target_sid,
+                           coalesce(t.sam_account_name, t.name) AS target_name,
+                           labels(t)[0] AS target_type
+                    ORDER BY edge_type
+                    """,
+                    aid=assessment_id,
+                )
+                return [
+                    {
+                        'source_sid': r['source_sid'],
+                        'source_name': r['source_name'],
+                        'edge_type': r['edge_type'],
+                        'target_sid': r['target_sid'],
+                        'target_name': r['target_name'],
+                        'target_type': r['target_type'],
+                    }
+                    for r in result
+                ]
+        except Exception as exc:
+            logger.warning(f"[ADGraph] find_acl_abuse failed: {exc}")
+            return []
