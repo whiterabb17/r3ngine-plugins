@@ -26,6 +26,7 @@ class BloodHoundParser:
                 props = cls._props(entry)
                 name = props.get('name', '')
                 sam = name.split('@')[0] if '@' in name else name
+                spn = props.get('serviceprincipalnames', [])
                 results.append({
                     'sam_account_name': sam,
                     'display_name': props.get('displayname', sam),
@@ -37,6 +38,9 @@ class BloodHoundParser:
                     'sid': props.get('objectid', ''),
                     'domain': props.get('domain', ''),
                     'primary_group_sid': entry.get('PrimaryGroupSid', ''),
+                    'spn': spn,
+                    'dont_req_preauth': props.get('dontreqpreauth', False),
+                    'kerberoastable': bool(spn) and props.get('enabled', True),
                 })
             except Exception as exc:
                 logger.warning(f"[BH] Failed to parse user: {exc}")
@@ -94,6 +98,8 @@ class BloodHoundParser:
                     'last_logon': str(props.get('lastlogontimestamp', '')),
                     'sid': props.get('objectid', ''),
                     'domain': props.get('domain', ''),
+                    'unconstrained_delegation': props.get('unconstraineddelegation', False),
+                    'constrained_delegation_targets': props.get('allowedtodelegate', []),
                 })
             except Exception as exc:
                 logger.warning(f"[BH] Failed to parse computer: {exc}")
@@ -117,11 +123,63 @@ class BloodHoundParser:
                 logger.warning(f"[BH] Failed to parse domain: {exc}")
         return results
 
+    _ACE_RIGHT_NAMES = {
+        'GenericAll', 'WriteDacl', 'WriteOwner',
+        'ForceChangePassword', 'HasSession', 'AdminTo', 'AllowedToDelegate',
+    }
+
+    @classmethod
+    def parse_aces(cls, entry: dict, source_sid: str) -> list:
+        """Extract ACL edges from a BloodHound entry's Aces list."""
+        result = []
+        for ace in entry.get('Aces', []):
+            right = ace.get('RightName')
+            if right not in cls._ACE_RIGHT_NAMES:
+                continue
+            target_sid = ace.get('PrincipalSID')
+            if not target_sid:
+                continue
+            result.append({
+                'source_sid': source_sid,
+                'target_sid': target_sid,
+                'target_type': ace.get('PrincipalType', 'Unknown'),
+                'right': right,
+                'is_inherited': ace.get('IsInherited', False),
+            })
+        return result
+
+    _RIGHT_TO_REL = {
+        'GenericAll': 'AD_GENERIC_ALL',
+        'WriteDacl': 'AD_WRITE_DACL',
+        'WriteOwner': 'AD_WRITE_OWNER',
+        'ForceChangePassword': 'AD_FORCE_CHANGE_PW',
+        'HasSession': 'AD_HAS_SESSION',
+        'AdminTo': 'AD_ADMIN_TO',
+        'AllowedToDelegate': 'AD_ALLOWED_TO_DELEGATE',
+    }
+
+    @classmethod
+    def _write_acl_edges(cls, assessment_id: int, aces: list) -> None:
+        if not aces:
+            return
+        try:
+            from ..graph.manager import ADGraphManager
+            with ADGraphManager() as mgr:
+                for ace in aces:
+                    rel = cls._RIGHT_TO_REL.get(ace['right'])
+                    if rel:
+                        mgr.create_acl_edge(
+                            ace['source_sid'], ace['target_sid'],
+                            ace['target_type'], rel, assessment_id,
+                        )
+        except Exception as exc:
+            logger.error(f"[BH] ACL edge write failed: {exc}")
+
     @classmethod
     def ingest_from_directory(
             cls, directory: str, assessment_id: int,
             db_write: bool = True) -> Dict:
-        summary = {'users': 0, 'groups': 0, 'computers': 0, 'domains': 0}
+        summary = {'users': 0, 'groups': 0, 'computers': 0, 'domains': 0, 'aces': 0}
 
         parser_map = {
             'users.json': ('users', cls.parse_users),
@@ -131,6 +189,7 @@ class BloodHoundParser:
         }
 
         parsed = {}
+        all_aces = []
         for filename, (key, parser_fn) in parser_map.items():
             filepath = os.path.join(directory, filename)
             if os.path.exists(filepath):
@@ -140,18 +199,26 @@ class BloodHoundParser:
                     entries = raw.get('data', raw) if isinstance(raw, dict) else raw
                     parsed[key] = parser_fn(entries)
                     summary[key] = len(parsed[key])
+                    if key in ('users', 'groups', 'computers'):
+                        for item, entry in zip(parsed[key], entries):
+                            sid = item.get('sid', '')
+                            if sid:
+                                all_aces.extend(cls.parse_aces(entry, sid))
                 except Exception as exc:
                     logger.error(f"[BH] Failed to parse {filename}: {exc}")
             else:
                 parsed[key] = []
 
+        summary['aces'] = len(all_aces)
+
         if db_write and assessment_id:
-            cls._write_to_graph(assessment_id, parsed)
+            cls._write_to_graph(assessment_id, parsed, all_aces)
 
         return summary
 
     @classmethod
-    def _write_to_graph(cls, assessment_id: int, parsed: dict) -> None:
+    def _write_to_graph(cls, assessment_id: int, parsed: dict,
+                        all_aces: list = None) -> None:
         try:
             from ..graph.manager import ADGraphManager
             with ADGraphManager() as mgr:
@@ -175,8 +242,11 @@ class BloodHoundParser:
                                         member['sid'], label,
                                         group['sid'], assessment_id)
                                 except Exception as exc:
-                                    logger.warning(f"[BH] Membership edge skipped (sid={member['sid']}): {exc}")
+                                    logger.warning(
+                                        f"[BH] Membership edge skipped (sid={member['sid']}): {exc}")
                 for computer in parsed.get('computers', []):
                     mgr.upsert_computer({**computer, 'assessment_id': assessment_id})
+            if all_aces:
+                cls._write_acl_edges(assessment_id, all_aces)
         except Exception as exc:
             logger.error(f"[BH] Graph write failed: {exc}")
