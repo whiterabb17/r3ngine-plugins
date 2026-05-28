@@ -43,6 +43,15 @@ AD_BELONGS_TO = 'AD_BELONGS_TO'
 AD_PROTECTED_BY = 'AD_PROTECTED_BY'
 AD_ROUTES_THROUGH = 'AD_ROUTES_THROUGH'
 
+# Attack path / ACL edge types (BloodHound-derived)
+AD_GENERIC_ALL        = 'AD_GENERIC_ALL'
+AD_WRITE_DACL         = 'AD_WRITE_DACL'
+AD_WRITE_OWNER        = 'AD_WRITE_OWNER'
+AD_FORCE_CHANGE_PW    = 'AD_FORCE_CHANGE_PW'
+AD_HAS_SESSION        = 'AD_HAS_SESSION'
+AD_ADMIN_TO           = 'AD_ADMIN_TO'
+AD_ALLOWED_TO_DELEGATE = 'AD_ALLOWED_TO_DELEGATE'
+
 # ---------------------------------------------------------------------------
 # Node property maps
 # ---------------------------------------------------------------------------
@@ -105,6 +114,27 @@ CONSTRAINT_STATEMENTS = [
 
     "CREATE CONSTRAINT ad_finding_unique IF NOT EXISTS "
     "FOR (n:ADFinding) REQUIRE (n.finding_id, n.assessment_id) IS UNIQUE",
+
+    "CREATE CONSTRAINT ad_acl_generic_all_unique IF NOT EXISTS "
+    "FOR ()-[r:AD_GENERIC_ALL]-() REQUIRE (r.source_sid, r.target_sid, r.assessment_id) IS UNIQUE",
+
+    "CREATE CONSTRAINT ad_acl_write_dacl_unique IF NOT EXISTS "
+    "FOR ()-[r:AD_WRITE_DACL]-() REQUIRE (r.source_sid, r.target_sid, r.assessment_id) IS UNIQUE",
+
+    "CREATE CONSTRAINT ad_acl_write_owner_unique IF NOT EXISTS "
+    "FOR ()-[r:AD_WRITE_OWNER]-() REQUIRE (r.source_sid, r.target_sid, r.assessment_id) IS UNIQUE",
+
+    "CREATE CONSTRAINT ad_acl_force_change_pw_unique IF NOT EXISTS "
+    "FOR ()-[r:AD_FORCE_CHANGE_PW]-() REQUIRE (r.source_sid, r.target_sid, r.assessment_id) IS UNIQUE",
+
+    "CREATE CONSTRAINT ad_acl_has_session_unique IF NOT EXISTS "
+    "FOR ()-[r:AD_HAS_SESSION]-() REQUIRE (r.source_sid, r.target_sid, r.assessment_id) IS UNIQUE",
+
+    "CREATE CONSTRAINT ad_acl_admin_to_unique IF NOT EXISTS "
+    "FOR ()-[r:AD_ADMIN_TO]-() REQUIRE (r.source_sid, r.target_sid, r.assessment_id) IS UNIQUE",
+
+    "CREATE CONSTRAINT ad_acl_allowed_to_delegate_unique IF NOT EXISTS "
+    "FOR ()-[r:AD_ALLOWED_TO_DELEGATE]-() REQUIRE (r.source_sid, r.target_sid, r.assessment_id) IS UNIQUE",
 ]
 
 INDEX_STATEMENTS = [
