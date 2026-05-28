@@ -7,6 +7,7 @@ import { ADGraphExplorerPage } from './ADGraphExplorerPage';
 import { ADTrustAnalyticsPage } from './ADTrustAnalyticsPage';
 import { ADExposureDashboardPage } from './ADExposureDashboardPage';
 import { ADReportsPage } from './ADReportsPage';
+import { ADAttackPathsPage } from './ADAttackPathsPage';
 
 type Route =
   | { view: 'list' }
@@ -14,7 +15,8 @@ type Route =
   | { view: 'graph'; assessmentId: number }
   | { view: 'trusts'; assessmentId: number }
   | { view: 'exposures'; assessmentId: number }
-  | { view: 'reports'; assessmentId: number };
+  | { view: 'reports'; assessmentId: number }
+  | { view: 'attack_paths'; assessmentId: number };
 
 function parseSubpath(subpath: string): Route {
   const m = subpath.match(/^assessment\/(\d+)(?:\/(\w+))?/);
@@ -25,6 +27,7 @@ function parseSubpath(subpath: string): Route {
     if (view === 'trusts') return { view: 'trusts', assessmentId };
     if (view === 'exposures') return { view: 'exposures', assessmentId };
     if (view === 'reports') return { view: 'reports', assessmentId };
+    if (view === 'attack_paths') return { view: 'attack_paths', assessmentId };
     return { view: 'detail', assessmentId };
   }
   return { view: 'list' };
@@ -44,6 +47,7 @@ export function ADPluginApp({ subpath = '' }: { subpath?: string }) {
       if (path === 'trusts') { setRoute({ view: 'trusts', assessmentId }); return; }
       if (path === 'exposures') { setRoute({ view: 'exposures', assessmentId }); return; }
       if (path === 'reports') { setRoute({ view: 'reports', assessmentId }); return; }
+      if (path === 'attack_paths') { setRoute({ view: 'attack_paths', assessmentId }); return; }
     }
   };
 
@@ -72,6 +76,7 @@ export function ADPluginApp({ subpath = '' }: { subpath?: string }) {
       {route.view === 'trusts' && <ADTrustAnalyticsPage assessmentId={route.assessmentId} />}
       {route.view === 'exposures' && <ADExposureDashboardPage assessmentId={route.assessmentId} />}
       {route.view === 'reports' && <ADReportsPage assessmentId={route.assessmentId} />}
+      {route.view === 'attack_paths' && <ADAttackPathsPage assessmentId={route.assessmentId} />}
     </Box>
   );
 }

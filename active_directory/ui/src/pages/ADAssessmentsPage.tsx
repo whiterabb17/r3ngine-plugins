@@ -3,10 +3,11 @@ import {
   Box, Typography, Button, Table, TableHead, TableBody,
   TableRow, TableCell, IconButton, Tooltip, CircularProgress
 } from '@mui/material';
-import { Plus, Play, Eye, ShieldAlert } from 'lucide-react';
+import { Plus, Play, Eye, ShieldAlert, Settings } from 'lucide-react';
 import { useAssessments, useStartAssessment } from '../api/adApi';
 import { AssessmentStatusBadge } from '../components/AssessmentStatusBadge';
 import { CreateAssessmentDialog } from '../components/CreateAssessmentDialog';
+import { ADPluginConfigModal } from '../components/ADPluginConfigModal';
 
 interface Props {
   onNavigate?: (path: string) => void;
@@ -14,6 +15,7 @@ interface Props {
 
 export function ADAssessmentsPage({ onNavigate }: Props) {
   const [createOpen, setCreateOpen] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
   const { data: assessments, isLoading, error } = useAssessments();
   const { mutate: start } = useStartAssessment();
 
@@ -26,13 +28,20 @@ export function ADAssessmentsPage({ onNavigate }: Props) {
         <Typography variant="h5" sx={{ fontFamily: 'Orbitron', letterSpacing: 2 }}>
           AD INTELLIGENCE
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<Plus size={16} />}
-          onClick={() => setCreateOpen(true)}
-        >
-          New Assessment
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <Tooltip title="Plugin Settings">
+            <IconButton size="small" onClick={() => setConfigOpen(true)} sx={{ color: 'rgba(255,255,255,0.6)' }}>
+              <Settings size={18} />
+            </IconButton>
+          </Tooltip>
+          <Button
+            variant="contained"
+            startIcon={<Plus size={16} />}
+            onClick={() => setCreateOpen(true)}
+          >
+            New Assessment
+          </Button>
+        </Box>
       </Box>
 
       {(assessments ?? []).length === 0 ? (
@@ -84,6 +93,7 @@ export function ADAssessmentsPage({ onNavigate }: Props) {
       )}
 
       <CreateAssessmentDialog open={createOpen} onClose={() => setCreateOpen(false)} />
+      <ADPluginConfigModal open={configOpen} onClose={() => setConfigOpen(false)} />
     </Box>
   );
 }
