@@ -262,13 +262,9 @@ interface Props {
 4. Shows a `CircularProgress` spinner while loading
 5. Shows an error message if the module fails to load or the export is not found
 
-**The plugin is served from `MEDIA_ROOT`** — it must be installed and synced first:
+**The plugin is served from `MEDIA_ROOT`** — this happens automatically when you install from the marketplace or upload a zip. The `AtomicInstaller` copies `ui/dist/` to `MEDIA_ROOT/plugins/{slug}/ui/` as part of installation.
 
-```bash
-# Install plugin (copies to web/plugins_data/{slug}/)
-# Then sync UI to MEDIA_ROOT:
-docker exec r3ngine-web-1 python manage.py sync_plugin_ui
-```
+> **Note:** The `sync_plugin_ui` management command exists for emergency re-sync only (e.g. after a manual file restore). Normal marketplace installs do not require it.
 
 ---
 
@@ -281,11 +277,9 @@ Build:   npm run build  (or build_plugins.py)
          ↓
 Output:  r3ngine-plugins/{slug}/ui/dist/index.js
          ↓
-Package: build_plugins.py  →  dist/{slug}.zip  (includes ui/dist/ as ui/)
+Package: build_plugins.py  →  dist/{slug}.zip
          ↓
-Install: AtomicInstaller  →  web/plugins_data/{slug}/ui/
-         ↓
-Sync:    sync_plugin_ui  →  MEDIA_ROOT/plugins/{slug}/ui/
+Install: AtomicInstaller  →  plugins_data/{slug}/  +  MEDIA_ROOT/plugins/{slug}/ui/
          ↓
 Served:  /media/plugins/{slug}/ui/index.js
 ```

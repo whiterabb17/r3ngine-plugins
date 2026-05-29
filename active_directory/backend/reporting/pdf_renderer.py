@@ -41,14 +41,18 @@ def _build_html(report: dict) -> str:
         for f in findings
     )
 
-    trust_rows = ''.join(
-        f'<tr><td>{_esc(t.get("source",""))}</td><td>{_esc(t.get("target",""))}</td>'
-        f'<td>{_esc(t.get("type",""))}</td><td>{_esc(t.get("direction",""))}</td>'
-        f'<td>{"Yes" if t.get("is_transitive") else "No"}</td>'
-        f'<td>{"Enabled" if t.get("is_selective_auth") else "<b style=\"color:#f44336\">Disabled</b>"}</td>'
-        f'<td>{t.get("risk_score", 0):.1f}</td></tr>'
-        for t in trusts
-    )
+    trust_rows_list = []
+    for t in trusts:
+        transitive_str = "Yes" if t.get("is_transitive") else "No"
+        sel_auth_str = "Enabled" if t.get("is_selective_auth") else '<b style="color:#f44336">Disabled</b>'
+        trust_rows_list.append(
+            f'<tr><td>{_esc(t.get("source",""))}</td><td>{_esc(t.get("target",""))}</td>'
+            f'<td>{_esc(t.get("type",""))}</td><td>{_esc(t.get("direction",""))}</td>'
+            f'<td>{transitive_str}</td>'
+            f'<td>{sel_auth_str}</td>'
+            f'<td>{t.get("risk_score", 0):.1f}</td></tr>'
+        )
+    trust_rows = ''.join(trust_rows_list)
 
     exposure_rows = ''.join(
         f'<tr><td>{_esc(e.get("hostname",""))}</td><td>{_esc(e.get("type",""))}</td>'

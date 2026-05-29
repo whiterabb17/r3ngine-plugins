@@ -2,15 +2,19 @@ import { useState, useEffect } from 'react';
 import {
   Box, Typography, Button, Tabs, Tab, Table, TableHead,
   TableBody, TableRow, TableCell, Chip, CircularProgress,
+  IconButton, Tooltip,
 } from '@mui/material';
-import { Upload, XCircle } from 'lucide-react';
+import { Upload, XCircle, Network, FileText, SlidersHorizontal, Route } from 'lucide-react';
 import { useAssessment, useFindings, useCancelAssessment, useEvidenceLog } from '../api/adApi';
 import type { ADEvidenceLogEntry } from '../types';
 import { AssessmentStatusBadge } from '../components/AssessmentStatusBadge';
 import { IngestDataDialog } from '../components/IngestDataDialog';
 import { WorkflowProgressPanel } from '../components/WorkflowProgressPanel';
+import { ADAssessmentConfigModal } from '../components/ADAssessmentConfigModal';
 import { useWsEventBus } from '../hooks/useWsEventBus';
 import { useAnalyticsStore } from '../store/analyticsStore';
+import { ADTrustAnalyticsPage } from './ADTrustAnalyticsPage';
+import { ADExposureDashboardPage } from './ADExposureDashboardPage';
 
 interface Props {
   assessmentId: number;
@@ -25,6 +29,7 @@ export function ADAssessmentDetailPage({ assessmentId, onNavigate }: Props) {
   const [tab, setTab] = useState(0);
   const [findingsPage, setFindingsPage] = useState(1);
   const [ingestOpen, setIngestOpen] = useState(false);
+  const [assessmentConfigOpen, setAssessmentConfigOpen] = useState(false);
   const [logPage, setLogPage] = useState(1);
 
   const { findingsSeverityFilter, setFindingsSeverityFilter, resetFilters } = useAnalyticsStore();
@@ -70,9 +75,23 @@ export function ADAssessmentDetailPage({ assessmentId, onNavigate }: Props) {
               Cancel
             </Button>
           )}
-          <Button size="small" variant="outlined" onClick={() => onNavigate?.('graph')}>
+          <Button size="small" variant="outlined" startIcon={<Network size={14} />}
+            onClick={() => onNavigate?.('graph')}>
             Graph Explorer
           </Button>
+          <Button size="small" variant="outlined" startIcon={<Route size={14} />}
+            onClick={() => onNavigate?.('attack_paths')}>
+            Attack Paths
+          </Button>
+          <Button size="small" variant="outlined" startIcon={<FileText size={14} />}
+            onClick={() => onNavigate?.('reports')}>
+            Reports
+          </Button>
+          <Tooltip title="Assessment Settings">
+            <IconButton size="small" onClick={() => setAssessmentConfigOpen(true)} sx={{ color: 'rgba(255,255,255,0.6)' }}>
+              <SlidersHorizontal size={16} />
+            </IconButton>
+          </Tooltip>
         </Box>
       </Box>
 
@@ -140,6 +159,10 @@ export function ADAssessmentDetailPage({ assessmentId, onNavigate }: Props) {
         </Box>
       )}
 
+      {tab === 1 && <ADTrustAnalyticsPage assessmentId={assessmentId} />}
+
+      {tab === 2 && <ADExposureDashboardPage assessmentId={assessmentId} />}
+
       {tab === 3 && (
         <Box>
           <Table size="small">
@@ -190,6 +213,13 @@ export function ADAssessmentDetailPage({ assessmentId, onNavigate }: Props) {
         assessmentId={assessmentId}
         onClose={() => setIngestOpen(false)}
       />
+      {assessmentConfigOpen && (
+        <ADAssessmentConfigModal
+          assessment={assessment}
+          open={assessmentConfigOpen}
+          onClose={() => setAssessmentConfigOpen(false)}
+        />
+      )}
     </Box>
   );
 }

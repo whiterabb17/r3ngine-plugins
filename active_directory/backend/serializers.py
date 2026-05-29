@@ -1,6 +1,6 @@
 # r3ngine-plugins/active_directory/backend/serializers.py
 from rest_framework import serializers
-from .models import ADAssessment, ADDomain, ADTrust, ADExposure, ADFinding, ADGraphSnapshot, ADEvidenceLog
+from .models import ADAssessment, ADDomain, ADTrust, ADExposure, ADFinding, ADGraphSnapshot, ADEvidenceLog, ADPluginConfig
 
 
 class ADDomainSerializer(serializers.ModelSerializer):
@@ -135,3 +135,10 @@ class ADEvidenceLogSerializer(serializers.ModelSerializer):
 
     def get_actor_username(self, obj):
         return obj.actor.username if obj.actor else None
+
+
+class ADPluginConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ADPluginConfig
+        fields = ['id', 'neo4j_bolt_url', 'max_path_length', 'bloodhound_ce_url', 'default_phases']
+        read_only_fields = ['id']

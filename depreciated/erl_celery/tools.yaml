@@ -1,0 +1,11 @@
+tools:
+  - name: "sqlmap"
+    binary: "sqlmap"
+    install_type: "pip3"
+    install_command: "pip3 install sqlmap"
+    validation_command: "sqlmap --version"
+  - name: "XSStrike"
+    binary: "python3 /usr/src/app/plugins_data/erl_celery/tools/XSStrike/xsstrike.py"
+    install_type: "git"
+    install_command: "mkdir -p tools && git clone --depth 1 https://github.com/s0md3v/XSStrike.git tools/XSStrike && pip3 install -r tools/XSStrike/requirements.txt"
+    validation_command: "python3 tools/XSStrike/xsstrike.py --version"

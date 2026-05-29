@@ -1,34 +1,25 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import federation from '@originjs/vite-plugin-federation';
 
 export default defineConfig({
-  plugins: [react()],
-  build: {
-    lib: {
-      entry: 'src/index.ts',
-      name: 'ADPlugin',
-      fileName: 'index',
-      formats: ['es'],
-    },
-    rollupOptions: {
-      external: [
-        'react',
-        'react-dom',
-        '@mui/material',
-        '@mui/material/styles',
-        '@mui/icons-material',
-        'lucide-react',
-        'cytoscape',
-      ],
-      output: {
-        globals: {
-          react: 'React',
-          'react-dom': 'ReactDOM',
-          '@mui/material': 'MaterialUI',
-        },
+  plugins: [
+    react(),
+    federation({
+      name: 'active_directory',
+      filename: 'remoteEntry.js',
+      exposes: {
+        './mount': './src/mount',
       },
-    },
+      shared: [],
+    }),
+  ],
+  build: {
+    target: 'esnext',
     outDir: 'dist',
     emptyOutDir: true,
+    rollupOptions: {
+      input: './src/index.ts',
+    },
   },
 });

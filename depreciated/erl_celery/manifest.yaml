@@ -1,0 +1,9 @@
+name: "ERL Celery"
+version: "1.0.0"
+description: "Validated vulnerability confirmation using sandboxed tools. Migrated from core to Plugin."
+runtime:
+  run after: "VulnerabilityScan"
+ui:
+  overrides:
+    - name: "VulnerabilityTable"
+      file: "VulnerabilityTable.js"

@@ -2,7 +2,7 @@ export interface ADAssessment {
   id: number;
   name: string;
   target_domain: string;
-  status: 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'CANCELLED';
+  status: 'PENDING' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
   created_at: string;
   completed_at: string | null;
   workflow_id: string | null;
@@ -120,6 +120,20 @@ export interface CorrelationCompletedPayload {
 export interface WSMessage {
   type: WSEventType;
   payload: Record<string, unknown>;
+}
+
+export interface ADPluginConfig {
+  id: number;
+  neo4j_bolt_url: string;
+  max_path_length: number;
+  bloodhound_ce_url: string;
+  default_phases: string[];
+}
+
+export interface AttackPathsResult {
+  results: unknown[];
+  count: number;
+  error?: string;
 }
 
 export interface ADReport {
