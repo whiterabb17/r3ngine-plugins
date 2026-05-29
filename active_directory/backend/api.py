@@ -452,6 +452,11 @@ class ADPluginConfigView(APIView):
         return Response(ADPluginConfigSerializer(cfg).data)
 
     def put(self, request):
+        if not (request.user.is_staff or request.user.is_superuser):
+            return Response(
+                {'error': 'Admin access is required to modify plugin configuration.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         cfg = ADPluginConfig.get()
         serializer = ADPluginConfigSerializer(cfg, data=request.data)
         serializer.is_valid(raise_exception=True)

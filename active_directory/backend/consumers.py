@@ -16,7 +16,30 @@ WEBSOCKET_URLPATTERNS = [
 
 class ADAssessmentConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        user = self.scope.get('user')
+        if not user or not user.is_authenticated:
+            await self.close(code=4401)
+            return
+
         self.assessment_id = self.scope['url_route']['kwargs']['assessment_id']
+
+        # Verify the user owns this assessment (or is staff).
+        try:
+            from .models import ADAssessment
+            from django.db.models import Q
+            assessment_qs = ADAssessment.objects.filter(id=self.assessment_id)
+            if not (user.is_staff or user.is_superuser):
+                assessment_qs = assessment_qs.filter(
+                    Q(created_by=user) | Q(created_by__isnull=True)
+                )
+            if not await assessment_qs.aexists():
+                await self.close(code=4403)
+                return
+        except Exception as exc:
+            logger.error(f"AD WebSocket auth check failed: {exc}")
+            await self.close(code=4500)
+            return
+
         self.stream_key = f"ad:assessment:{self.assessment_id}"
         self.group_name = f"ad_assessment_{self.assessment_id}"
 

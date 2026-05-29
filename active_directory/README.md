@@ -25,6 +25,10 @@
   </a>
 </p>
 
+<p align="center">
+  <img src="docs/dashboard.png" height="550px" width="1020px" alt=""/>
+</p>
+
 ![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/aqua.png)
 
 ## About
