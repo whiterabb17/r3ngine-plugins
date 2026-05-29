@@ -1,0 +1,18 @@
+marketplace:
+  - slug: active_directory
+    name: "Active Directory"
+    version: "1.0.0"
+    description: "Enterprise AD assessment, identity intelligence, and exposure management plugin for contracted penetration testing and consulting engagements."
+    category: "Intelligence"
+
+  - slug: exploit_readiness_layer
+    name: "Exploit Readiness Layer"
+    version: "1.0.0"
+    description: "Validated vulnerability confirmation using sandboxed tools. Ported to Temporal workflow."
+    category: "Exploitation"
+
+  - slug: active_exploitation
+    name: "Active Exploitation"
+    version: "1.0.0"
+    description: "SQLMap and deep exploitation integration running via Temporal workflows."
+    category: "Exploitation"

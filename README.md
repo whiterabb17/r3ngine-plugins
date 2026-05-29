@@ -397,3 +397,19 @@ Tools are installed into `plugins_data/{slug}/` on the worker container.
 - Use `_send_ws_update(assessment_id, type, payload)` in Temporal activities to push real-time progress via WebSocket
 - WebSocket endpoint for plugins: `ws[s]://{host}/ws/plugins/{slug}/{assessment_id}/`
 - All data fetching in plugin UI should use `credentials: 'include'` to pass session cookies
+
+
+# Active Directory Plugin
+<p align="center">
+  <img src="active_directory/docs/dashboard.png" height="550px" width="1020px" alt=""/>
+</p>
+
+# Exploit Readiness Layer Plugin
+<p align="center">
+  <img src="exploit_readiness_layer/docs/dashboard.png" height="550px" width="1020px" alt=""/>
+</p>
+
+# Active Exploitation Plugin
+<p align="center">
+  <img src="active_exploitation/docs/dashboard.png" height="550px" width="1020px" alt=""/>
+</p>

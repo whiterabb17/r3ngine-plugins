@@ -58,7 +58,27 @@ export function ADPluginApp({ subpath = '' }: { subpath?: string }) {
   };
 
   return (
-    <Box>
+    <Box sx={{
+      position: 'relative',
+      overflow: 'hidden',
+      background: 'linear-gradient(135deg, rgba(20, 15, 30, 0.7) 0%, rgba(10, 10, 15, 0.9) 100%)',
+      backdropFilter: 'blur(25px) saturate(180%)',
+      border: '1px solid rgba(255, 255, 255, 0.06)',
+      borderRadius: '18px',
+      boxShadow: 'inset 0 0 30px rgba(0, 0, 0, 0.5), 0 15px 35px rgba(0, 0, 0, 0.8)',
+      p: 3,
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        inset: 0,
+        borderRadius: 'inherit',
+        background: 'radial-gradient(circle at 20% 20%, rgba(255, 43, 214, 0.15), transparent 50%), radial-gradient(circle at 80% 80%, rgba(0, 240, 255, 0.1), transparent 50%)',
+        opacity: 0.6,
+        pointerEvents: 'none',
+        zIndex: 0,
+      },
+    }}>
+      <Box sx={{ position: 'relative', zIndex: 1 }}>
       {route.view !== 'list' && (
         <Box sx={{ mb: 1 }}>
           <Tooltip title="Back">
@@ -77,6 +97,7 @@ export function ADPluginApp({ subpath = '' }: { subpath?: string }) {
       {route.view === 'exposures' && <ADExposureDashboardPage assessmentId={route.assessmentId} />}
       {route.view === 'reports' && <ADReportsPage assessmentId={route.assessmentId} />}
       {route.view === 'attack_paths' && <ADAttackPathsPage assessmentId={route.assessmentId} />}
+      </Box>
     </Box>
   );
 }
