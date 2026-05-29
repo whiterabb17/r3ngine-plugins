@@ -1,3 +1,7 @@
+<p align="center">
+<img src="https://raw.githubusercontent.com/whiterabb17/r3ngine/refs/heads/main/frontend/public/img/banner.png" height="400px" width="520px" alt=""/>
+</p>
+
 # reNgine v3 Plugin Development Guide
 
 reNgine v3 introduces a modular plugin architecture that lets developers extend the platform's capabilities without modifying the core codebase. Plugins can add backend pipelines, Temporal workflows, and full UI pages.
