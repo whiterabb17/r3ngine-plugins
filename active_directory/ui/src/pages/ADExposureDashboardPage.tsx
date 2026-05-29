@@ -37,8 +37,7 @@ export function ADExposureDashboardPage({ assessmentId }: Props) {
   const { data: exposures, isLoading, error } = useExposures(assessmentId);
   const { exposureTypeFilter, setExposureTypeFilter } = useAnalyticsStore();
 
-  if (isLoading) return <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}><CircularProgress /></Box>;
-  if (error) return <Alert severity="error">Failed to load exposure data</Alert>;
+  // useMemo must be called before any early returns to satisfy the Rules of Hooks.
   const exposureList = exposures?.results ?? [];
   const allTypes = useMemo(
     () => [...new Set(exposureList.map((e) => e.exposure_type))].sort(),
@@ -47,6 +46,9 @@ export function ADExposureDashboardPage({ assessmentId }: Props) {
   const filteredExposures = exposureTypeFilter
     ? exposureList.filter((e) => e.exposure_type === exposureTypeFilter)
     : exposureList;
+
+  if (isLoading) return <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}><CircularProgress /></Box>;
+  if (error) return <Alert severity="error">Failed to load exposure data</Alert>;
 
   if (!exposureList.length) return (
     <Box>
