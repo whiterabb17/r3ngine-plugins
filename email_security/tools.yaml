@@ -1,0 +1,17 @@
+tools:
+  - name: dnspython
+    install_type: pip
+    package: dnspython>=2.4.0
+    version_check: python3 -c "import dns; print(dns.__version__)"
+
+  - name: smtp-user-enum
+    install_type: apt
+    package: smtp-user-enum
+    binary: smtp-user-enum
+    version_check: smtp-user-enum --help
+
+  - name: swaks
+    install_type: apt
+    package: swaks
+    binary: swaks
+    version_check: swaks --version

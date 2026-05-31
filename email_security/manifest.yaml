@@ -1,0 +1,17 @@
+name: "Email Security"
+description: "SMTP open relay, user enumeration, STARTTLS, and SPF/DKIM/DMARC policy checks. Runs automatically after Tier 2 port scanning."
+version: "1.0.0"
+author: "s1l3nt78"
+
+runtime:
+  run after: "tier_2"
+  position: "AFTER"
+
+temporal:
+  workflows:
+    - "backend.temporal_exports.EmailSecurityWorkflow"
+  activities:
+    - "backend.temporal_exports.run_email_security_activity"
+
+ui:
+  enabled: false
