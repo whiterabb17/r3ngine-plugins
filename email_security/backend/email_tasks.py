@@ -127,3 +127,103 @@ def assess_spoofability(spf: dict, dmarc: dict) -> list:
             ),
         })
     return findings
+
+
+def swaks_relay_test(host: str, port: int, domain: str, timeout: int = 20) -> dict:
+    """Test for SMTP open relay using swaks.
+
+    Attempts to send a probe to an external address from a domain-spoofed sender.
+    Returns {"open_relay": bool, "banner": str | None, "raw": str}
+    """
+    cmd = [
+        'swaks',
+        '--to', 'probe@relay-test-probe.invalid',
+        '--from', f'probe@{domain}',
+        '--server', host,
+        '--port', str(port),
+        '--quit-after', 'RCPT',
+        '--hide-all',
+        '--timeout', str(timeout),
+    ]
+    result = {"open_relay": False, "banner": None, "raw": ""}
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout + 5)
+        output = proc.stdout + proc.stderr
+        result["raw"] = output[:2000]
+
+        lines = output.splitlines()
+        for i, line in enumerate(lines):
+            if '<-' in line and '220' in line and result["banner"] is None:
+                result["banner"] = line.split('<-', 1)[-1].strip()[:200]
+            if '<-' in line and line.strip().startswith('<- 250') and 'RCPT' in '\n'.join(lines[max(0, i-3):i]):
+                result["open_relay"] = True
+    except subprocess.TimeoutExpired:
+        logger.debug(f"[swaks_relay_test] {host}:{port} timed out")
+    except FileNotFoundError:
+        logger.warning("[swaks_relay_test] swaks not found in PATH")
+    except Exception as e:
+        logger.debug(f"[swaks_relay_test] {host}:{port}: {e}")
+    return result
+
+
+def swaks_starttls_check(host: str, port: int, timeout: int = 15) -> dict:
+    """Check whether STARTTLS is advertised in SMTP EHLO response.
+
+    Returns {"starttls_supported": bool, "ehlo_raw": str}
+    """
+    cmd = [
+        'swaks',
+        '--server', host,
+        '--port', str(port),
+        '--quit-after', 'EHLO',
+        '--hide-all',
+        '--timeout', str(timeout),
+    ]
+    result = {"starttls_supported": False, "ehlo_raw": ""}
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout + 5)
+        output = proc.stdout + proc.stderr
+        result["ehlo_raw"] = output[:2000]
+        result["starttls_supported"] = 'STARTTLS' in output.upper()
+    except subprocess.TimeoutExpired:
+        logger.debug(f"[swaks_starttls_check] {host}:{port} timed out")
+    except FileNotFoundError:
+        logger.warning("[swaks_starttls_check] swaks not found in PATH")
+    except Exception as e:
+        logger.debug(f"[swaks_starttls_check] {host}:{port}: {e}")
+    return result
+
+
+def smtp_user_enum(host: str, port: int, wordlist: str = '/usr/share/smtp-user-enum/username.txt',
+                   method: str = 'VRFY', timeout: int = 60) -> dict:
+    """Run smtp-user-enum against host:port.
+
+    Returns {"users_found": list[str], "raw": str}
+    """
+    cmd = [
+        'smtp-user-enum',
+        '-M', method,
+        '-U', wordlist,
+        '-t', host,
+        '-p', str(port),
+        '-T', str(timeout),
+    ]
+    result = {"users_found": [], "raw": ""}
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout + 10)
+        output = proc.stdout
+        result["raw"] = output[:5000]
+        for line in output.splitlines():
+            if 'EXISTS' in line or '250 ' in line:
+                parts = line.split(':')
+                if len(parts) >= 2:
+                    user = parts[-1].replace('EXISTS', '').strip()
+                    if user and '@' not in user:
+                        result["users_found"].append(user)
+    except subprocess.TimeoutExpired:
+        logger.debug(f"[smtp_user_enum] {host}:{port} timed out")
+    except FileNotFoundError:
+        logger.warning("[smtp_user_enum] smtp-user-enum not found in PATH")
+    except Exception as e:
+        logger.debug(f"[smtp_user_enum] {host}:{port}: {e}")
+    return result
