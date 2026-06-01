@@ -151,12 +151,11 @@ def swaks_relay_test(host: str, port: int, domain: str, timeout: int = 20) -> di
         output = proc.stdout + proc.stderr
         result["raw"] = output[:2000]
 
-        lines = output.splitlines()
-        for i, line in enumerate(lines):
+        # swaks exits 0 when RCPT is accepted (--quit-after RCPT), meaning relay allowed
+        result["open_relay"] = proc.returncode == 0
+        for line in output.splitlines():
             if '<-' in line and '220' in line and result["banner"] is None:
                 result["banner"] = line.split('<-', 1)[-1].strip()[:200]
-            if '<-' in line and line.strip().startswith('<- 250') and 'RCPT' in '\n'.join(lines[max(0, i-3):i]):
-                result["open_relay"] = True
     except subprocess.TimeoutExpired:
         logger.debug(f"[swaks_relay_test] {host}:{port} timed out")
     except FileNotFoundError:
@@ -220,6 +219,11 @@ def smtp_user_enum(host: str, port: int, wordlist: str = '/usr/share/smtp-user-e
                     user = parts[-1].replace('EXISTS', '').strip()
                     if user and '@' not in user:
                         result["users_found"].append(user)
+        if proc.returncode != 0 and not result["users_found"]:
+            logger.warning(
+                f"[smtp_user_enum] {host}:{port} exited {proc.returncode} "
+                f"(wordlist missing or tool error): {(proc.stderr or output)[:200]}"
+            )
     except subprocess.TimeoutExpired:
         logger.debug(f"[smtp_user_enum] {host}:{port} timed out")
     except FileNotFoundError:
