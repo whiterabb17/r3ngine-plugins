@@ -1,0 +1,15 @@
+tools:
+  - name: dnspython
+    install_type: pip3
+    install_command: "pip3 install 'dnspython>=2.4.0'"
+    validation_command: "python3 -c \"import dns; print(dns.__version__)\""
+
+  - name: smtp-user-enum
+    install_type: apt
+    install_command: "apt-get install -y --no-install-recommends smtp-user-enum"
+    validation_command: "smtp-user-enum --help 2>&1 | head -1"
+
+  - name: swaks
+    install_type: apt
+    install_command: "apt-get install -y --no-install-recommends swaks"
+    validation_command: "swaks --version 2>&1 | head -1"

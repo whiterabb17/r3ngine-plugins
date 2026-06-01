@@ -3,7 +3,7 @@ tools:
     binary: "ldapdomaindump"
     install_type: "pip3"
     install_command: "pip3 install ldapdomaindump"
-    validation_command: "ldapdomaindump --version"
+    validation_command: "ldapdomaindump -h"
 
   - name: "impacket"
     binary: "python3 -c 'import impacket; print(impacket.__version__)'"
