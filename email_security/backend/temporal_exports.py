@@ -37,18 +37,21 @@ def run_email_security_activity(ctx: dict) -> dict:
 
     def _vuln(name, severity, description, url=None):
         nonlocal findings_count
-        save_vulnerability(
-            target_domain=scan.domain,
-            scan_history=scan,
-            name=name,
-            severity=severity,
-            description=description,
-            http_url=url or f'smtp://{domain_name}',
-            type='SMTP',
-            source='email_security',
-            dedup_fields=['name', 'http_url', 'scan_history'],
-        )
-        findings_count += 1
+        try:
+            save_vulnerability(
+                target_domain=scan.domain,
+                scan_history=scan,
+                name=name,
+                severity=severity,
+                description=description,
+                http_url=url or f'smtp://{domain_name}',
+                type='SMTP',
+                source='email_security',
+                dedup_fields=['name', 'http_url', 'scan_history'],
+            )
+            findings_count += 1
+        except Exception as e:
+            activity.logger.error(f"[run_email_security_activity] save_vulnerability failed for '{name}': {e}")
 
     # ── DNS checks (always run) ──────────────────────────────────────────────
     spf = check_spf(domain_name)
@@ -96,13 +99,17 @@ def run_email_security_activity(ctx: dict) -> dict:
         )
 
     # ── SMTP port-aware checks (only if port scan found SMTP ports) ──────────
-    smtp_hosts = list(
-        Subdomain.objects.filter(
-            scan_history_id=scan_id,
-            ip_addresses__ports__number__in=SMTP_PORTS,
-        ).values_list('name', 'ip_addresses__address', 'ip_addresses__ports__number')
-        .distinct()
-    )
+    try:
+        smtp_hosts = list(
+            Subdomain.objects.filter(
+                scan_history_id=scan_id,
+                ip_addresses__ports__number__in=SMTP_PORTS,
+            ).values_list('name', 'ip_addresses__address', 'ip_addresses__ports__number')
+            .distinct()
+        )
+    except Exception as e:
+        activity.logger.error(f"[run_email_security_activity] scan_id={scan_id} DB query failed: {e}")
+        raise
 
     activity.logger.info(
         f"[run_email_security_activity] scan_id={scan_id} smtp_hosts_found={len(smtp_hosts)}"
@@ -111,6 +118,11 @@ def run_email_security_activity(ctx: dict) -> dict:
     checked_pairs = set()
     for (subdomain_name, ip_address, port) in smtp_hosts:
         host = subdomain_name or ip_address
+        if not host:
+            activity.logger.warning(
+                f"[run_email_security_activity] scan_id={scan_id} skipping entry with null host"
+            )
+            continue
         pair = (host, port)
         if pair in checked_pairs:
             continue
@@ -169,7 +181,7 @@ class EmailSecurityWorkflow:
         result = await workflow.execute_activity(
             run_email_security_activity,
             ctx,
-            start_to_close_timeout=timedelta(hours=1),
+            start_to_close_timeout=timedelta(minutes=30),
             heartbeat_timeout=timedelta(minutes=10),
             task_queue="python-orchestrator-queue",
         )
