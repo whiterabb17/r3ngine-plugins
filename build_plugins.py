@@ -80,6 +80,15 @@ def build_plugin(plugin_slug, sign=True):
         if os.path.exists(tools_path):
             zf.write(tools_path, 'tools.yaml')
 
+        # Package docs directory if present
+        docs_dir = os.path.join(plugin_dir, 'docs')
+        if os.path.exists(docs_dir):
+            for root, dirs, files in os.walk(docs_dir):
+                for file in files:
+                    abs_path = os.path.join(root, file)
+                    rel_path = os.path.relpath(abs_path, plugin_dir)
+                    zf.write(abs_path, rel_path)
+
         for item in os.listdir(plugin_dir):
             if item.endswith('_engine.yaml'):
                 zf.write(os.path.join(plugin_dir, item), item)
@@ -142,7 +151,7 @@ def build_plugin(plugin_slug, sign=True):
     final_path = os.path.join(plugin_dir, f"{plugin_slug}.r3n")
     shutil.copy2(dist_path, final_path)
 
-    print(f"[+] Successfully built {plugin_slug}.r3n → {final_path}")
+    print(f"[+] Successfully built {plugin_slug}.r3n -> {final_path}")
 
 
 if __name__ == '__main__':
