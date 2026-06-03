@@ -1,0 +1,23 @@
+name: "Burp Suite Integration"
+slug: "burpsuite_integration"
+version: "1.0.0"
+description: "Bidirectional Burp Suite Professional integration: import scan findings into r3ngine and push reconnaissance targets back to Burp scope."
+author: "Security-Tools-Alliance / reNgine-ng Authors & MistrHyde"
+license: "GPLv3"
+
+runtime:
+  run after: "standalone"   # Standalone: no pipeline injection; triggered manually from UI
+
+temporal:
+  workflows:
+    - "backend.temporal_exports.BurpSuiteWorkflow"
+  activities:
+    - "backend.temporal_exports.run_burp_import_activity"
+    - "backend.temporal_exports.run_burp_correlate_activity"
+    - "backend.temporal_exports.run_burp_push_activity"
+
+ui:
+  menu_item: "Burp Suite"
+  menu_path: "/p/burpsuite-integration"
+  entry_export: "BurpSuiteDashboard"
+  icon: "shield-alert"
