@@ -193,19 +193,25 @@ def swaks_starttls_check(host: str, port: int, timeout: int = 15) -> dict:
     return result
 
 
-def smtp_user_enum(host: str, port: int, wordlist: str = '/usr/share/smtp-user-enum/username.txt',
+SMTP_USERNAMES_WORDLIST = '/usr/src/wordlist/smtp-usernames.txt'
+
+
+def smtp_user_enum(host: str, port: int, wordlist: str = SMTP_USERNAMES_WORDLIST,
                    method: str = 'VRFY', timeout: int = 60) -> dict:
     """Run smtp-user-enum against host:port.
 
     Returns {"users_found": list[str], "raw": str}
     """
+    if not os.path.isfile(wordlist):
+        logger.warning(f"[smtp_user_enum] wordlist not found: {wordlist}")
+        return {"users_found": [], "raw": ""}
+
     cmd = [
         'smtp-user-enum',
         '-M', method,
         '-U', wordlist,
         '-t', host,
         '-p', str(port),
-        '-T', str(timeout),
     ]
     result = {"users_found": [], "raw": ""}
     try:

@@ -909,17 +909,18 @@ def test_neo4j_query(self, mock_db):
 
 ## Reference: Existing Plugins
 
-The three bundled plugins are the canonical reference implementations:
+The four bundled plugins are the canonical reference implementations:
 
 | Plugin | Focus | Backend | Temporal | UI |
 |--------|-------|---------|----------|----|
 | `active_directory` | AD attack path analysis, Neo4j graph, BloodHound ingestion | ✓ Full | ✓ 6 activities | ✓ Full React app |
 | `active_exploitation` | SQLi exploitation via sqlmap, encrypted dump storage | ✓ Full | ✓ 1 activity | ✓ Dashboard |
 | `exploit_readiness_layer` | Non-destructive vuln validation (sqlmap + XSStrike) | ✓ Full | ✓ 1 activity | ✓ Dashboard |
+| `burpsuite_integration` | Bidirectional Burp Suite Pro REST API sync & manual target matching | ✓ Full | ✓ 3 activities | ✓ Tabbed Dashboard + config modal |
 
 Study `active_directory` for a complete, complex plugin with full Temporal workflows, Neo4j graph queries, WebSocket streaming, RBAC, and a multi-page React UI with router state, config modals, and attack path visualisation.
 
-Study `active_exploitation` or `exploit_readiness_layer` for simpler single-workflow examples with dashboard UIs.
+Study `burpsuite_integration` for an example of dynamic target matching and external API integrations, or `active_exploitation` / `exploit_readiness_layer` for simpler single-workflow examples with dashboard UIs.
 
 ### Checklist
 
