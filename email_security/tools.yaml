@@ -2,14 +2,14 @@ tools:
   - name: dnspython
     install_type: pip3
     install_command: "pip3 install 'dnspython>=2.4.0'"
-    validation_command: "python3 -c \"import dns; print(dns.__version__)\""
+    validation_command: "python3 -c 'import dns'"
 
   - name: smtp-user-enum
-    install_type: apt
-    install_command: "apt-get install -y --no-install-recommends smtp-user-enum"
-    validation_command: "smtp-user-enum --help 2>&1 | head -1"
+    install_type: git
+    install_command: "apt-get install -y --no-install-recommends libnet-ssleay-perl libauthen-sasl-perl && git clone --depth 1 https://github.com/pentestmonkey/smtp-user-enum.git /tmp/smtp-user-enum-src && cp /tmp/smtp-user-enum-src/smtp-user-enum.pl /usr/local/bin/smtp-user-enum && chmod +x /usr/local/bin/smtp-user-enum && rm -rf /tmp/smtp-user-enum-src"
+    validation_command: "command -v smtp-user-enum"
 
   - name: swaks
     install_type: apt
     install_command: "apt-get install -y --no-install-recommends swaks"
-    validation_command: "swaks --version 2>&1 | head -1"
+    validation_command: "command -v swaks"

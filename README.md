@@ -413,3 +413,8 @@ Tools are installed into `plugins_data/{slug}/` on the worker container.
 <p align="center">
   <img src="active_exploitation/docs/dashboard.png" height="550px" width="1020px" alt=""/>
 </p>
+
+# Burp Suite Professional Integration Plugin
+<p align="center">
+  <img src="burpsuite_integration/docs/dashboard.png" height="550px" width="1020px" alt="Burp Suite Dashboard"/>
+</p>

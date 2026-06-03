@@ -1,0 +1,5 @@
+tools:
+  - name: "burpsuite-rest-api"
+    description: "Burp Suite Professional REST API (localhost:1337 by default). Must be running externally on the host machine."
+    install_type: "external"
+    validation_command: ""

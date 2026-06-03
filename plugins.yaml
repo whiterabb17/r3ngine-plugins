@@ -22,3 +22,11 @@ marketplace:
     description: "SQLMap and deep exploitation integration running via Temporal workflows."
     category: "Exploitation"
     signed: true
+
+  - slug: burpsuite_integration
+    name: "Burp Suite Integration"
+    version: "1.0.0"
+    author: "Security-Tools-Alliance / reNgine-ng Authors & MistrHyde"
+    description: "Bidirectional Burp Suite Professional integration for findings import, correlation, manual matching, and scope management."
+    category: "Integration"
+    signed: false
