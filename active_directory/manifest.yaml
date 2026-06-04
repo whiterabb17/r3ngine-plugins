@@ -2,6 +2,7 @@ name: "Active Directory"
 description: "Enterprise AD assessment, identity intelligence, and exposure management plugin for contracted penetration testing and consulting engagements."
 version: "1.0.0"
 author: "MistrHyde"
+icon: "icon.png"
 
 # "standalone" ensures this plugin never injects into the main scan pipeline.
 # The PluginOrchestrator only calls plugins whose anchor_step matches a real scan task.

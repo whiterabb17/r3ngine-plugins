@@ -4,6 +4,7 @@ version: "1.0.0"
 description: "Bidirectional Burp Suite Professional integration: import scan findings into r3ngine and push reconnaissance targets back to Burp scope."
 author: "Security-Tools-Alliance / reNgine-ng Authors & MistrHyde"
 license: "GPLv3"
+icon: "icon.png"
 
 runtime:
   run after: "standalone"   # Standalone: no pipeline injection; triggered manually from UI

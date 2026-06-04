@@ -1,0 +1,18 @@
+tools:
+  - name: "netexec"
+    binary: "nxc"
+    install_type: "pipx"
+    install_command: "pipx install git+https://github.com/Pennyw0rth/NetExec"
+    validation_command: "nxc --version"
+
+  - name: "kerbrute"
+    binary: "kerbrute"
+    install_type: "bash"
+    install_command: 'wget -q "https://github.com/ropnop/kerbrute/releases/download/v1.0.3/kerbrute_linux_amd64" -O /usr/local/bin/kerbrute && chmod +x /usr/local/bin/kerbrute'
+    validation_command: "kerbrute -h"
+
+  - name: "hashcat"
+    binary: "hashcat"
+    install_type: "apt"
+    install_command: "apt-get update && apt-get install -y hashcat"
+    validation_command: "hashcat --version"
