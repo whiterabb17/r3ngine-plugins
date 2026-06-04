@@ -1,6 +1,7 @@
 """Email security scanning functions for the email_security plugin."""
 
 import logging
+import os
 import subprocess
 
 logger = logging.getLogger(__name__)
