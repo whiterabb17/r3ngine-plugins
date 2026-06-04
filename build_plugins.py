@@ -89,6 +89,14 @@ def build_plugin(plugin_slug, sign=True):
                     rel_path = os.path.relpath(abs_path, plugin_dir)
                     zf.write(abs_path, rel_path)
 
+        # Package root-level icon/image assets (icon.png, icon.svg, etc.)
+        ICON_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.svg', '.webp', '.gif')
+        for item in os.listdir(plugin_dir):
+            item_path = os.path.join(plugin_dir, item)
+            if os.path.isfile(item_path) and item.lower().endswith(ICON_EXTENSIONS):
+                zf.write(item_path, item)
+                print(f"[*] Packaged icon: {item}")
+
         for item in os.listdir(plugin_dir):
             if item.endswith('_engine.yaml'):
                 zf.write(os.path.join(plugin_dir, item), item)
