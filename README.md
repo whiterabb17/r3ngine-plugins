@@ -1,5 +1,9 @@
 # reNgine v3 Plugin Development Guide
 
+<p align="center">
+  <img src="https://img.shields.io/badge/version-v1.2.0-informational?&logo=none" alt="r3ngine Latest Version" />
+</p>
+
 reNgine v3 introduces a modular plugin architecture that lets developers extend the platform's capabilities without modifying the core codebase. Plugins can add backend pipelines, Temporal workflows, and full UI pages.
 
 ---
@@ -416,5 +420,17 @@ Tools are installed into `plugins_data/{slug}/` on the worker container.
 
 # Burp Suite Professional Integration Plugin
 <p align="center">
-  <img src="burpsuite_integration/docs/dashboard.png" height="550px" width="1020px" alt="Burp Suite Dashboard"/>
+  <!-- <img src="burpsuite_integration/docs/dashboard.png" height="550px" width="1020px" alt="Burp Suite Dashboard"/> -->
+</p>
+
+# Credential Intelligence Plugin
+Advanced authentication testing and password auditing via brutus, netexec, kerbrute, and hashcat.
+<p align="center">
+  <!-- <img src="credential_intelligence/docs/dashboard.png" height="550px" width="1020px" alt="Credential Intelligence Dashboard"/> -->
+</p>
+
+# Email Security Plugin
+SMTP open relay, user enumeration, STARTTLS, and SPF/DKIM/DMARC policy checks. Runs automatically after Tier 2 port scanning.
+<p align="center">
+  <!-- <img src="email_security/docs/dashboard.png" height="550px" width="1020px" alt="Email Security Dashboard"/> -->
 </p>

@@ -1,0 +1,20 @@
+name: "Credential Intelligence"
+slug: "credential_intelligence"
+version: "1.0.0"
+description: "Advanced authentication testing and password auditing via brutus, netexec, kerbrute, and hashcat."
+author: "MistrHyde"
+icon: "icon.png"
+
+runtime:
+  run after: "standalone"
+
+temporal:
+  workflows:
+    - "backend.temporal_exports.CredentialIntelligenceWorkflow"
+  activities:
+    - "backend.temporal_exports.run_credential_intel_activity"
+
+ui:
+  menu_item: "Credential Intel"
+  menu_path: "/p/credential-intelligence"
+  entry_export: "CredentialDashboard"

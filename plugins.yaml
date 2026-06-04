@@ -29,4 +29,20 @@ marketplace:
     author: "Security-Tools-Alliance / reNgine-ng Authors & MistrHyde"
     description: "Bidirectional Burp Suite Professional integration for findings import, correlation, manual matching, and scope management."
     category: "Integration"
-    signed: false
+    signed: true
+
+  - slug: credential_intelligence
+    name: "Credential Intelligence"
+    version: "1.0.0"
+    author: "MistrHyde"
+    description: "Advanced authentication testing and password auditing via brutus, netexec, kerbrute, and hashcat."
+    category: "Intelligence"
+    signed: true
+
+  - slug: email_security
+    name: "Email Security"
+    version: "1.0.0"
+    author: "MistrHyde"
+    description: "SMTP open relay, user enumeration, STARTTLS, and SPF/DKIM/DMARC policy checks."
+    category: "Security"
+    signed: true
