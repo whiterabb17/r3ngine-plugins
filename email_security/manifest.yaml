@@ -1,7 +1,7 @@
 name: "Email Security"
 description: "SMTP open relay, user enumeration, STARTTLS, and SPF/DKIM/DMARC policy checks. Runs automatically after Tier 2 port scanning."
 version: "1.0.2"
-author: "s1l3nt78"
+author: "MistrHyde"
 icon: "icon.png"
 
 runtime:
