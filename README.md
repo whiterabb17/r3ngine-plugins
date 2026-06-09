@@ -49,16 +49,18 @@ my-plugin/
 `manifest.yaml` is the source of truth for your plugin.
 
 ```yaml
-slug: "my_plugin"
 name: "My Plugin"
 version: "1.0.0"
-description: "What this plugin does."
 author: "Your Name"
+icon: "icon.png"
+description: "What this plugin does."
 
 runtime:
-  run_after: "VulnerabilityScan"   # Core scan step to run after
+  run_after: "VulnerabilityScan"   # Core scan step to run after options are run_before, run_after, standalone
 
 temporal:
+  workflows:
+    - "backend.temporal_exports.my_workflow"
   activities:
     - "backend.temporal_exports.my_activity"
     - "backend.temporal_exports.another_activity"
@@ -66,6 +68,7 @@ temporal:
 ui:
   menu_item: "My Plugin"           # Label in the "Plugins" nav group
   menu_path: "/my-plugin"          # Sub-path under /{projectSlug}/
+  entry_export: "MyPluginExport"
 ```
 
 ### Sequencing Anchors
