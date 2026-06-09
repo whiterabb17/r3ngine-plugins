@@ -98,12 +98,13 @@ def run_email_security_activity(ctx: dict) -> dict:
             spoof_finding['description'],
         )
 
-    # ── SMTP port-aware checks (only if port scan found SMTP ports) ──────────
+    # ── SMTP port-aware checks (known ports + any port nmap/naabu labelled smtp) ─
     try:
+        from django.db.models import Q
         smtp_hosts = list(
-            Subdomain.objects.filter(
-                scan_history_id=scan_id,
-                ip_addresses__ports__number__in=SMTP_PORTS,
+            Subdomain.objects.filter(scan_history_id=scan_id).filter(
+                Q(ip_addresses__ports__number__in=SMTP_PORTS) |
+                Q(ip_addresses__ports__service_name__icontains='smtp')
             ).values_list('name', 'ip_addresses__address', 'ip_addresses__ports__number')
             .distinct()
         )
@@ -152,16 +153,20 @@ def run_email_security_activity(ctx: dict) -> dict:
                     host_url,
                 )
 
-        if port == 25:
-            enum = smtp_user_enum(host, port)
-            if enum['users_found']:
-                users_str = ', '.join(enum['users_found'][:20])
-                _vuln(
-                    'SMTP User Enumeration (VRFY/EXPN)', 2,
-                    f'The SMTP server at {host}:{port} confirmed '
-                    f'{len(enum["users_found"])} valid usernames: {users_str}.',
-                    host_url,
-                )
+    # ── smtp-user-enum: single call across all discovered SMTP endpoints ────────
+    enum_targets = list(checked_pairs)
+    if enum_targets:
+        enum = smtp_user_enum(enum_targets)
+        for host_port_key, users in enum['users_found'].items():
+            if not users:
+                continue
+            users_str = ', '.join(users[:20])
+            _vuln(
+                'SMTP User Enumeration (VRFY/EXPN)', 2,
+                f'The SMTP server at {host_port_key} confirmed '
+                f'{len(users)} valid usernames: {users_str}.',
+                f'smtp://{host_port_key}',
+            )
 
     activity.logger.info(
         f"[run_email_security_activity] scan_id={scan_id} complete "

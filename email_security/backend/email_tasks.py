@@ -197,44 +197,88 @@ def swaks_starttls_check(host: str, port: int, timeout: int = 15) -> dict:
 SMTP_USERNAMES_WORDLIST = '/usr/src/wordlist/smtp-usernames.txt'
 
 
-def smtp_user_enum(host: str, port: int, wordlist: str = SMTP_USERNAMES_WORDLIST,
-                   method: str = 'VRFY', timeout: int = 60) -> dict:
-    """Run smtp-user-enum against host:port.
+def smtp_user_enum(targets: list, wordlist: str = SMTP_USERNAMES_WORDLIST,
+                   method: str = 'VRFY', timeout: int = 120) -> dict:
+    """Run smtp-user-enum once against all host:port targets using -T.
 
-    Returns {"users_found": list[str], "raw": str}
+    Args:
+        targets: list of (host, port) tuples
+        wordlist: path to usernames wordlist
+        method: VRFY, EXPN, or RCPT
+        timeout: seconds before killing the process
+
+    Returns:
+        {"users_found": {"host:port": [usernames]}, "raw": str}
     """
-    if not os.path.isfile(wordlist):
-        logger.warning(f"[smtp_user_enum] wordlist not found: {wordlist}")
-        return {"users_found": [], "raw": ""}
+    import tempfile
 
-    cmd = [
-        'smtp-user-enum',
-        '-M', method,
-        '-U', wordlist,
-        '-t', host,
-        '-p', str(port),
-    ]
-    result = {"users_found": [], "raw": ""}
+    if not targets:
+        return {"users_found": {}, "raw": ""}
+
+    if not os.path.isfile(wordlist):
+        logger.warning("[smtp_user_enum] wordlist not found: %s", wordlist)
+        return {"users_found": {}, "raw": ""}
+
+    targets_file = None
+    result: dict = {"users_found": {}, "raw": ""}
     try:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as tf:
+            targets_file = tf.name
+            for host, port in targets:
+                tf.write(f"{host}:{port}\n")
+
+        cmd = [
+            'smtp-user-enum',
+            '-M', method,
+            '-U', wordlist,
+            '-T', targets_file,
+        ]
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout + 10)
         output = proc.stdout
-        result["raw"] = output[:5000]
+        result["raw"] = output[:10000]
+
         for line in output.splitlines():
-            if 'EXISTS' in line or '250 ' in line:
-                parts = line.split(':')
-                if len(parts) >= 2:
-                    user = parts[-1].replace('EXISTS', '').strip()
-                    if user and '@' not in user:
-                        result["users_found"].append(user)
-        if proc.returncode != 0 and not result["users_found"]:
+            if 'EXISTS' not in line and '250 ' not in line:
+                continue
+            # Match line back to the originating host:port target.
+            # smtp-user-enum outputs lines like: "10.0.0.1:25: admin EXISTS"
+            matched_key = None
+            for host, port in targets:
+                host_port = f"{host}:{port}"
+                if host_port in line:
+                    matched_key = host_port
+                    break
+            if matched_key is None:
+                # Fallback: match on host alone
+                for host, port in targets:
+                    if host in line:
+                        matched_key = f"{host}:{port}"
+                        break
+            if matched_key is None:
+                continue
+            # Extract username — last colon-delimited segment, strip EXISTS/whitespace
+            user = line.rsplit(':', 1)[-1].replace('EXISTS', '').strip()
+            if user and '@' not in user:
+                result["users_found"].setdefault(matched_key, [])
+                if user not in result["users_found"][matched_key]:
+                    result["users_found"][matched_key].append(user)
+
+        if proc.returncode != 0 and not any(result["users_found"].values()):
             logger.warning(
-                f"[smtp_user_enum] {host}:{port} exited {proc.returncode} "
-                f"(wordlist missing or tool error): {(proc.stderr or output)[:200]}"
+                "[smtp_user_enum] exited %d: %s",
+                proc.returncode,
+                (proc.stderr or output)[:200],
             )
     except subprocess.TimeoutExpired:
-        logger.debug(f"[smtp_user_enum] {host}:{port} timed out")
+        logger.debug("[smtp_user_enum] timed out after %ds", timeout)
     except FileNotFoundError:
         logger.warning("[smtp_user_enum] smtp-user-enum not found in PATH")
     except Exception as e:
-        logger.debug(f"[smtp_user_enum] {host}:{port}: {e}")
+        logger.debug("[smtp_user_enum] error: %s", e)
+    finally:
+        if targets_file:
+            try:
+                os.unlink(targets_file)
+            except OSError:
+                pass
     return result
