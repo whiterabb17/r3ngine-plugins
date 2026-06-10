@@ -64,8 +64,9 @@ It provides an end-to-end orchestration flow: launch automated scan modules via 
 
 ### 💻 2-Way Interactive Terminal
 *   **Live Web Console**: A dockable, fully interactive `xterm.js` terminal.
-*   **PTY WebSockets**: Powered by Django Channels and Python pseudo-terminals (`pty`), offering a seamless MSF interactive experience straight from the browser.
+*   **PTY WebSockets**: Powered by Django Channels and Python pseudo-terminals (`pty`), offering a seamless, stable MSF interactive experience straight from the browser.
 *   **Hands-on Validation**: Analyze results on your dashboard, then pop open the auxiliary console to manually validate findings against targets.
+*   **Kill Switch Control**: Instantly terminate and clean up hanging or unneeded console sessions via the Docker SDK.
 
 ### 🔒 Zero-Trust Security Boundaries
 *   **Strict RBAC**: Operations are restricted exclusively to `IsPentesterOrAdmin` rules (enforcing `is_staff` / `is_superuser` requirements).

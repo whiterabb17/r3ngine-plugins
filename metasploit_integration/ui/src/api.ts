@@ -3,13 +3,13 @@ export function getCsrfToken(): string {
 }
 
 export const getConsoleModules = async () => {
-    const res = await api.get('/api/plugins/metasploit_integration/tasks/console-modules/');
-    return res.data as { success: boolean, modules?: any[], error?: string };
+    const res = await fetchWithAuth('/api/plugins/metasploit_integration/tasks/console-modules/');
+    return await res.json() as { success: boolean, modules?: any[], error?: string };
 };
 
 export const stopConsole = async () => {
-    const res = await api.post('/api/plugins/metasploit_integration/tasks/console-stop/');
-    return res.data;
+    const res = await fetchWithAuth('/api/plugins/metasploit_integration/tasks/console-stop/', { method: 'POST' });
+    return await res.json();
 };
 
 export async function fetchWithAuth(url: string, options?: RequestInit) {

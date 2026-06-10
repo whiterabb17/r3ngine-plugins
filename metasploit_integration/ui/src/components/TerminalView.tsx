@@ -319,6 +319,7 @@ export default function TerminalView({ wsBaseUrl, apiBaseUrl }: TerminalViewProp
                     </Typography>
                 </Box>
             </Box>
+        </Box>
             <Paper elevation={3} sx={{ flexGrow: 1, overflow: 'hidden', p: 1, bgcolor: '#0d1117', borderRadius: 1.5 }}>
                 <Box ref={terminalRef} sx={{ width: '100%', height: '100%' }} />
             </Paper>
