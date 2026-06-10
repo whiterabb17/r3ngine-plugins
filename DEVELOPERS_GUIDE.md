@@ -115,7 +115,7 @@ author: "Your Name"
 license: "GPLv3"
 
 runtime:
-  run after: "vulnerability_scan"   # or "run before: <step>"
+  run_after: "vulnerability_scan"   # or "run before: <step>"
                                     # REQUIRED — must declare one or the other
 
 temporal:
@@ -531,6 +531,8 @@ export default defineConfig({
     target: 'esnext',
     outDir: 'dist',
     emptyOutDir: true,
+    cssCodeSplit: false,             // REQUIRED — ensures a single CSS file is emitted for easier dynamic loading
+    chunkSizeWarningLimit: 3000,     // Suppress 500kb chunk warnings (expected since shared: [] bundles React/MUI)
     rollupOptions: {
       input: './src/index.ts',
     },
@@ -538,7 +540,9 @@ export default defineConfig({
 });
 ```
 
-> **Why `shared: []`?** `PluginPageLoader` calls `remote.init({})` with an empty shared scope object. If your plugin declares `shared: ['react']` but the host provides no React in the shared scope, module federation will fail at runtime. Keeping `shared: []` makes each plugin fully self-contained — all dependencies bundled, no shared scope negotiation needed.
+> **Why `shared: []` and large chunks?** `PluginPageLoader` calls `remote.init({})` with an empty shared scope object. If your plugin declares `shared: ['react']` but the host provides no React in the shared scope, module federation will fail at runtime. Keeping `shared: []` makes each plugin fully self-contained — all dependencies bundled, no shared scope negotiation needed. This produces larger bundles (hence `chunkSizeWarningLimit: 3000`) but guarantees absolute compatibility.
+> 
+> **Why `cssCodeSplit: false`?** When using Module Federation without an HTML entry point, dynamic CSS chunks may fail to load natively on the host page. Forcing a single emitted CSS file prevents race conditions with dynamic styles.
 
 ### Complete mount.tsx Example
 

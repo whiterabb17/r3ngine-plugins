@@ -162,63 +162,80 @@ The built file (`dist/VulnerabilityTable.js`) must have a **default export** —
 
 ---
 
-## Pattern 2: New Pages (PluginPageLoader Style)
+## Pattern 2: New Pages via Module Federation (Recommended)
 
-Use this when your plugin adds entirely new pages that need their own routes.
+Use this when your plugin adds entirely new pages or complex applications that need their own routes. This pattern leverages Vite Module Federation to dynamically load your app's `mount` point safely inside the host shell.
 
-### Step 1: Set up `vite.config.ts` with a barrel entry
+### Step 1: Set up `vite.config.ts`
+
+Use `@originjs/vite-plugin-federation` to expose a single `mount` module. Avoid sharing dependencies (`shared: []`) to ensure your plugin remains completely decoupled from host versions and avoids dependency clashes.
 
 ```typescript
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import federation from '@originjs/vite-plugin-federation';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    federation({
+      name: 'my_plugin',
+      filename: 'remoteEntry.js',
+      exposes: {
+        './mount': './src/mount.tsx',
+      },
+      shared: []
+    })
+  ],
   build: {
-    lib: {
-      entry: 'src/index.ts',   // Barrel that exports all page components by name
-      name: 'MyPlugin',
-      fileName: 'index',        // Output: dist/index.js
-      formats: ['es'],
-    },
-    rollupOptions: {
-      // Mark host-provided deps as external (NOT bundled)
-      external: [
-        'react', 'react-dom',
-        '@mui/material', '@mui/material/styles', '@mui/icons-material',
-        'lucide-react',
-      ],
-    },
+    target: 'esnext',
+    minify: false,
+    cssCodeSplit: false,
     outDir: 'dist',
-    emptyOutDir: true,
-  },
+    emptyOutDir: true
+  }
 });
 ```
 
-### Step 2: Export all pages from `src/index.ts`
+### Step 2: Create the `mount.tsx` integration hook
+
+The host system doesn't render your React tree directly. Instead, it creates an empty `div` and calls your `mount` function, passing it the DOM element and any host context (like the active `projectSlug`).
 
 ```typescript
-// src/index.ts
-export { MyListPage }   from './pages/MyListPage';
-export { MyDetailPage } from './pages/MyDetailPage';
+// src/mount.tsx
+import { createRoot, Root } from 'react-dom/client';
+import App from './App';
+
+let root: Root | null = null;
+
+export const mount = (el: HTMLElement, props: any) => {
+    root = createRoot(el);
+    root.render(<App {...props} />);
+};
+
+export const unmount = (_el: HTMLElement) => {
+    if (root) {
+        root.unmount();
+        root = null;
+    }
+};
 ```
 
-Each page is a **named export**. The host loads by name via `PluginPageLoader`.
+### Step 3: Write your `App.tsx`
 
-### Step 3: Write page components
-
-Page components receive props passed by the host route. Use `assessmentId`, `projectSlug`, or whatever the route provides.
+Now you can build your plugin as a completely standard React application!
 
 ```typescript
-// src/pages/MyListPage.tsx
+// src/App.tsx
 import React from 'react';
 
-interface Props {
-  projectSlug?: string;
-}
-
-export function MyListPage({ projectSlug }: Props) {
-  return <div>My Plugin page for project: {projectSlug}</div>;
+export default function App({ projectSlug }: { projectSlug: string }) {
+  return (
+    <div>
+      <h1>My Plugin Dashboard</h1>
+      <p>Active project: {projectSlug}</p>
+    </div>
+  );
 }
 ```
 
@@ -227,52 +244,10 @@ export function MyListPage({ projectSlug }: Props) {
 ```yaml
 ui:
   menu_item: "My Plugin"        # Nav label shown under "Plugins"
-  menu_path: "/p/my_plugin"     # Mapped to the dynamic route /{projectSlug}/p/{slug}
-  entry_export: "MyListPage"    # Named export from dist/index.js representing the entry page
+  menu_path: "/my_plugin"       # Mapped to the dynamic route /{projectSlug}/plugins/my_plugin
 ```
 
-When the plugin is enabled, the Shell reads `/api/plugins/registry/` and adds a nav link to `/{projectSlug}/p/my_plugin`.
-
-### Step 5: Standardized Dynamic Routes
-
-The host system includes pre-defined generic routes to load plugin pages dynamically. This removes the need to hardcode router modifications for each new plugin page:
-
-* **Plugin Main Entry Route (`/{projectSlug}/p/$pluginSlug`)**:
-  Automatically resolves the active plugin, reads its `entry_export` property, and loads it.
-  
-* **Plugin Subpage Route (`/{projectSlug}/p/$pluginSlug/$pageName`)**:
-  Loads the named export component `$pageName` from the plugin barrel file. This allows plugin developers to define as many nested routes as they need (e.g. `/p/my_plugin/MyDetailPage`).
-
-Dynamic page routing works automatically out-of-the-box for any installed plugin.
-
-
----
-
-## PluginPageLoader Reference
-
-`PluginPageLoader` is a host-side React component that dynamically loads a named export from a plugin's built ES module.
-
-```typescript
-// frontend/src/features/plugins/components/PluginPageLoader.tsx
-
-interface Props {
-  pluginSlug: string;   // e.g. "active_directory"
-  exportName: string;   // Named export from dist/index.js, e.g. "ADAssessmentsPage"
-  [key: string]: unknown;  // Additional props forwarded to the loaded component
-}
-```
-
-**How it works:**
-
-1. On mount, it `import()`-s `/media/plugins/{slug}/ui/index.js` (a cache-busted dynamic import)
-2. It looks up `module[exportName]` — the named export
-3. If found and it's a function, it renders it with all extra props forwarded
-4. Shows a `CircularProgress` spinner while loading
-5. Shows an error message if the module fails to load or the export is not found
-
-**The plugin is served from `MEDIA_ROOT`** — this happens automatically when you install from the marketplace or upload a zip. The `AtomicInstaller` copies `ui/dist/` to `MEDIA_ROOT/plugins/{slug}/ui/` as part of installation.
-
-> **Note:** The `sync_plugin_ui` management command exists for emergency re-sync only (e.g. after a manual file restore). Normal marketplace installs do not require it.
+When the plugin is enabled, the core router automatically detects it and renders the Module Federation remote loader.
 
 ---
 
@@ -283,13 +258,13 @@ Source: r3ngine-plugins/{slug}/ui/src/
          ↓
 Build:   npm run build  (or build_plugins.py)
          ↓
-Output:  r3ngine-plugins/{slug}/ui/dist/index.js
+Output:  r3ngine-plugins/{slug}/ui/dist/assets/remoteEntry.js
          ↓
 Package: build_plugins.py  →  dist/{slug}.zip
          ↓
 Install: AtomicInstaller  →  plugins_data/{slug}/  +  MEDIA_ROOT/plugins/{slug}/ui/
          ↓
-Served:  /media/plugins/{slug}/ui/index.js
+Served:  /media/plugins/{slug}/ui/assets/remoteEntry.js
 ```
 
 ### Building with `build_plugins.py`
