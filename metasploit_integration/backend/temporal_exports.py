@@ -18,7 +18,7 @@ async def generate_rc_script_activity(task_id: int) -> str:
         
     task = await get_task()
     
-    # Generate .rc content
+    # Generate .rc content as a single string of commands separated by semicolon
     rc_lines = [
         f"use {task.module_name}",
         f"set RHOSTS {task.target}"
@@ -31,40 +31,34 @@ async def generate_rc_script_activity(task_id: int) -> str:
     rc_lines.append("run")
     rc_lines.append("exit")
     
-    script_content = "\n".join(rc_lines)
-    
-    # Save to a temporary file accessible by the docker container
-    # For now, we use /tmp
-    script_path = f"/tmp/msf_{task_id}.rc"
-    with open(script_path, "w") as f:
-        f.write(script_content)
-        
-    return script_path
+    return "; ".join(rc_lines)
 
 @activity.defn
-async def run_msfconsole_activity(script_path: str) -> str:
-    # In a full r3ngine environment, tools are executed via the ToolExecutionEngine.
-    # We will simulate a subprocess call to docker here.
-    cmd = [
-        "docker", "run", "--rm",
-        "-v", f"{script_path}:/script.rc",
-        "metasploitframework/metasploit-framework:latest",
-        "msfconsole", "-q", "-r", "/script.rc"
-    ]
-    
-    proc = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
-    
-    stdout, stderr = await proc.communicate()
-    
-    # Cleanup script
-    if os.path.exists(script_path):
-        os.remove(script_path)
-        
-    return stdout.decode('utf-8', errors='replace') + "\n" + stderr.decode('utf-8', errors='replace')
+async def run_msfconsole_activity(commands: str) -> str:
+    import docker
+    import asyncio
+
+    def _run_docker():
+        client = docker.from_env()
+        try:
+            container_logs = client.containers.run(
+                "metasploitframework/metasploit-framework:latest",
+                command=["./msfconsole", "-q", "-x", commands],
+                network="r3ngine_r3ngine_network",
+                labels={
+                    'com.docker.compose.project': 'r3ngine',
+                    'com.docker.compose.service': 'msf_console_worker'
+                },
+                remove=True,
+                detach=False
+            )
+            return container_logs.decode('utf-8', errors='replace')
+        except docker.errors.ContainerError as e:
+            return e.stderr.decode('utf-8', errors='replace') if e.stderr else str(e)
+        except Exception as e:
+            return str(e)
+            
+    return await asyncio.to_thread(_run_docker)
 
 @activity.defn
 async def parse_and_save_findings_activity(task_id: int, raw_output: str):
@@ -109,8 +103,8 @@ class MetasploitTaskWorkflow:
     async def run(self, task_id: int):
         from temporalio import exceptions
         try:
-            # 1. Generate script
-            script_path = await workflow.execute_activity(
+            # 1. Generate script (commands string)
+            commands = await workflow.execute_activity(
                 generate_rc_script_activity,
                 task_id,
                 schedule_to_close_timeout=workflow.timedelta(seconds=10)
@@ -119,7 +113,7 @@ class MetasploitTaskWorkflow:
             # 2. Run MSF Console
             raw_output = await workflow.execute_activity(
                 run_msfconsole_activity,
-                script_path,
+                commands,
                 schedule_to_close_timeout=workflow.timedelta(minutes=10)
             )
             

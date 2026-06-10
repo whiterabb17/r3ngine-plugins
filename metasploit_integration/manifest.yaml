@@ -1,6 +1,6 @@
 name: "Metasploit Integration"
 description: "Standalone Metasploit integration providing a 2-way interactive terminal and automated Temporal-driven template scans."
-version: "1.0.0"
+version: "0.9.0"
 slug: "metasploit_integration"
 author: "MistrHyde"
 icon: "icon.png"
@@ -20,5 +20,5 @@ temporal:
 ui:
   entry: "ui/dist"
   menu_item: "Metasploit"
-  menu_path: "/p/metasploit"
+  menu_path: "/p/metasploit_integration"
   entry_export: "MetasploitPluginApp"

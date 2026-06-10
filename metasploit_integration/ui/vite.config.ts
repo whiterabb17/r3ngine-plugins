@@ -21,7 +21,7 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     rollupOptions: {
-      input: './src/mount.tsx',
+      input: './src/index.ts',
     },
   }
 });
