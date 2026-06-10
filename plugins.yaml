@@ -46,3 +46,11 @@ marketplace:
     description: "SMTP open relay, user enumeration, STARTTLS, and SPF/DKIM/DMARC policy checks."
     category: "Security"
     signed: true
+
+  - slug: metasploit_integration
+    name: "Metasploit Integration"
+    version: "1.0.0"
+    author: "MistrHyde"
+    description: "Standalone Metasploit integration providing a 2-way interactive terminal and automated Temporal-driven template scans."
+    category: "Exploitation"
+    signed: true

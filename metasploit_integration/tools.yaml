@@ -1,0 +1,5 @@
+tools:
+  - name: "metasploit"
+    description: "Metasploit Framework CLI via Docker"
+    docker_image: "metasploitframework/metasploit-framework:latest"
+    command: "-x '{commands}'"
