@@ -441,3 +441,9 @@ SMTP open relay, user enumeration, STARTTLS, and SPF/DKIM/DMARC policy checks. R
 <p align="center">
   <!-- <img src="email_security/docs/dashboard.png" height="550px" width="1020px" alt="Email Security Dashboard"/> -->
 </p>
+
+# Metasploit Integration Plugin
+Standalone Metasploit integration providing a 2-way interactive terminal and automated Temporal-driven template scans.
+<p align="center">
+  <!-- <img src="metasploit_integration/docs/dashboard.png" height="550px" width="1020px" alt="Metasploit Dashboard"/> -->
+</p>
