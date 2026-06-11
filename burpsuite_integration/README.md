@@ -1,6 +1,9 @@
 # Burp Suite Integration Plugin for r3ngine
 
-A bidirectional [Burp Suite Professional](https://portswigger.net/burp/pro) integration plugin for [r3ngine](https://github.com/Security-Tools-Alliance/rengine-ng). Import Burp scan findings directly into r3ngine vulnerability tracking, and push reconnaissance targets back to Burp's scope.
+## NOTE: This plugin has not been tested!
+### Please open an issue for any bugs found with as much information as you can provide. Thanks!
+
+A bidirectional [Burp Suite Professional](https://portswigger.net/burp/pro) inspired by [rengine-ng](https://github.com/Security-Tools-Alliance/rengine-ng) integration plugin for [r3ngine](https://github.com/whiterabb17/r3ngine). Import Burp scan findings directly into r3ngine vulnerability tracking, and push reconnaissance targets back to Burp's scope.
 
 ---
 

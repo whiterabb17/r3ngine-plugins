@@ -41,7 +41,7 @@ marketplace:
 
   - slug: email_security
     name: "Email Security"
-    version: "1.1.0"
+    version: "1.1.1"
     author: "MistrHyde"
     description: "SMTP open relay, user enumeration, STARTTLS, and SPF/DKIM/DMARC policy checks."
     category: "Security"
