@@ -45,6 +45,7 @@ export interface ADExposure {
   port: number | null;
   service_banner: string;
   correlated_domain: string | null;
+  correlated_domain_fqdn: string | null;
   created_at: string;
 }
 

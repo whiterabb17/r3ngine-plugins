@@ -109,7 +109,7 @@ export function ADExposureDashboardPage({ assessmentId }: Props) {
                 />
               </TableCell>
               <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                {e.correlated_domain ?? '—'}
+                {e.correlated_domain_fqdn ?? '—'}
               </TableCell>
             </TableRow>
           ))}

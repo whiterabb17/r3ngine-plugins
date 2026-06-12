@@ -38,7 +38,7 @@ class ADExposureSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'hostname', 'ip_address', 'port', 'exposure_type',
             'correlated_domain', 'correlated_domain_fqdn', 'risk_score',
-            'evidence', 'discovered_at',
+            'is_internet_facing', 'service_banner', 'evidence', 'discovered_at',
         ]
         read_only_fields = ['id', 'correlated_domain_fqdn', 'discovered_at']
 

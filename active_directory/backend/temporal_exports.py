@@ -2,6 +2,7 @@
 import asyncio
 import json
 import logging
+import os
 from datetime import timedelta
 from typing import Optional
 
@@ -503,6 +504,191 @@ def run_ingestion_activity(params: dict) -> dict:
     return summary
 
 
+@activity.defn
+def run_active_ldap_scan_activity(params: dict) -> dict:
+    """Active LDAP discovery using ldapdomaindump.
+
+    Reads Domain Controller IP, username, and password from the assessment
+    configuration, runs the ldapdomaindump CLI tool to extract Active Directory
+    objects, and automatically parses the dumped files.
+
+    Args:
+        params (dict): Dictionary containing assessment_id.
+
+    Returns:
+        dict: Status and summary of the parsed entities.
+    """
+    assessment_id = params['assessment_id']
+    activity.logger.info(f"[RunActiveLdapScanActivity] Starting active LDAP discovery for assessment_id={assessment_id}")
+
+    from .models import ADAssessment
+    from django.conf import settings
+    import subprocess
+    import tempfile
+    import shutil
+
+    try:
+        assessment = ADAssessment.objects.get(pk=assessment_id)
+        config = assessment.config or {}
+        dc_ip = config.get('dc_ip')
+        ldap_user = config.get('ldap_user')
+        ldap_password = config.get('ldap_password')
+
+        if not dc_ip:
+            activity.logger.warning(f"[RunActiveLdapScanActivity] No Domain Controller IP (dc_ip) configured. Skipping.")
+            return {'status': 'skipped', 'message': 'No DC IP configured'}
+
+        # Prepare target output directory inside workspace
+        out_dir = tempfile.mkdtemp(dir=os.path.join(settings.BASE_DIR, 'plugins_data'))
+
+        cmd = ['ldapdomaindump', '-o', out_dir]
+        if ldap_user and ldap_password:
+            cmd.extend(['-u', ldap_user, '-p', ldap_password])
+        cmd.append(dc_ip)
+
+        cmd_str = ' '.join(cmd)
+        activity.logger.info(f"[RunActiveLdapScanActivity] Executing: {cmd_str}")
+
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+
+        if result.returncode != 0:
+            activity.logger.error(f"[RunActiveLdapScanActivity] ldapdomaindump failed: {result.stderr}")
+            shutil.rmtree(out_dir, ignore_errors=True)
+            return {'status': 'failed', 'error': result.stderr}
+
+        activity.logger.info(f"[RunActiveLdapScanActivity] ldapdomaindump completed successfully. Starting ingestion.")
+
+        # Ingest parsed JSON outputs
+        from .ingestion.ldap_parser import LDAPParser
+        summary = LDAPParser.ingest_from_directory(out_dir, assessment_id)
+
+        shutil.rmtree(out_dir, ignore_errors=True)
+        activity.logger.info(f"[RunActiveLdapScanActivity] Ingestion completed. Summary: {summary}")
+        return {'status': 'completed', 'summary': summary}
+
+    except Exception as exc:
+        activity.logger.error(f"[RunActiveLdapScanActivity] Activity failed: {exc}")
+        return {'status': 'failed', 'error': str(exc)}
+
+
+@activity.defn
+def run_active_certipy_scan_activity(params: dict) -> dict:
+    """Active AD CS discovery using Certipy.
+
+    Runs certipy find against the target DC and extracts certificate templates,
+    identifying misconfigured ones (such as ESC1) and creating critical vulnerability findings.
+
+    Args:
+        params (dict): Dictionary containing assessment_id.
+
+    Returns:
+        dict: Status and count of templates discovered.
+    """
+    assessment_id = params['assessment_id']
+    activity.logger.info(f"[RunActiveCertipyScanActivity] Starting active AD CS discovery for assessment_id={assessment_id}")
+
+    from .models import ADAssessment
+    from django.conf import settings
+    import subprocess
+    import tempfile
+    import shutil
+    import json
+
+    try:
+        assessment = ADAssessment.objects.get(pk=assessment_id)
+        config = assessment.config or {}
+        dc_ip = config.get('dc_ip')
+        ldap_user = config.get('ldap_user')
+        ldap_password = config.get('ldap_password')
+        target_domain = assessment.target_domain
+
+        if not dc_ip:
+            activity.logger.warning(f"[RunActiveCertipyScanActivity] No Domain Controller IP (dc_ip) configured. Skipping.")
+            return {'status': 'skipped', 'message': 'No DC IP configured'}
+
+        # Prepare target output directory inside workspace
+        out_dir = tempfile.mkdtemp(dir=os.path.join(settings.BASE_DIR, 'plugins_data'))
+
+        # Format command: certipy find -vulnerable -u user -p pass -dc-ip dc_ip -stdout -json
+        cmd = ['certipy', 'find', '-vulnerable', '-dc-ip', dc_ip, '-stdout', '-json']
+        if ldap_user and ldap_password:
+            # Parse user and domain from domain\user or user@domain
+            user_part = ldap_user.split('\\')[-1] if '\\' in ldap_user else ldap_user
+            domain_part = ldap_user.split('\\')[0] if '\\' in ldap_user else target_domain
+            cmd.extend(['-u', f"{user_part}@{domain_part}", '-p', ldap_password])
+        else:
+            cmd.extend(['-u', f"@{target_domain}", '-no-pass'])
+
+        cmd_str = ' '.join(cmd)
+        activity.logger.info(f"[RunActiveCertipyScanActivity] Executing: {cmd_str}")
+
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+
+        if result.returncode != 0:
+            activity.logger.error(f"[RunActiveCertipyScanActivity] certipy failed: {result.stderr}")
+            shutil.rmtree(out_dir, ignore_errors=True)
+            return {'status': 'failed', 'error': result.stderr}
+
+        activity.logger.info(f"[RunActiveCertipyScanActivity] certipy completed successfully. Starting parsing.")
+
+        templates_count = 0
+        try:
+            raw_data = json.loads(result.stdout)
+            templates = raw_data.get('Certificate Templates', {})
+
+            from ..graph.manager import ADGraphManager
+            from ..models import ADFinding
+
+            with ADGraphManager() as mgr:
+                for tname, tdetails in templates.items():
+                    # Upsert ADCertificate node
+                    client_auth = 'Client Authentication' in tdetails.get('Enrollment Rights', []) or tdetails.get('Client Authentication', False)
+                    enrollee_supplies = tdetails.get('Enrollee Supplies Subject', False)
+
+                    mgr.upsert_certificate_template({
+                        'name': tname,
+                        'common_name': tdetails.get('Template Name', tname),
+                        'enrollee_supplies_subject': enrollee_supplies,
+                        'client_authentication': client_auth,
+                        'assessment_id': assessment_id,
+                    })
+                    templates_count += 1
+
+                    # If ESC1 misconfigured (Enrollee supplies subject AND Client authentication is true)
+                    if enrollee_supplies and client_auth:
+                        ADFinding.objects.get_or_create(
+                            assessment=assessment,
+                            title=f"Vulnerable Certificate Template: {tname} (ESC1)",
+                            defaults={
+                                'description': (
+                                    f"The certificate template {tname} is configured such that enrollees "
+                                    f"can supply a subject alternative name (SAN) in the request, and the certificate "
+                                    f"allows Client Authentication. This permits domain users to request a certificate "
+                                    f"as any user (e.g. Domain Administrator) and authenticate as them."
+                                ),
+                                'severity': 'CRITICAL',
+                                'finding_type': 'adcs_vulnerability',
+                                'affected_object': tname,
+                                'evidence': tdetails,
+                                'remediation': (
+                                    f"1. Open Certificate Templates console (certtmpl.msc).\n"
+                                    f"2. Right-click '{tname}' -> Properties.\n"
+                                    f"3. In the 'Subject Name' tab, select 'Build from this Active Directory information' "
+                                    f"instead of 'Supply in the request'."
+                                )
+                            }
+                        )
+        except Exception as json_err:
+            activity.logger.warning(f"[RunActiveCertipyScanActivity] Failed to parse certipy output as JSON: {json_err}. Output: {result.stdout[:200]}")
+
+        shutil.rmtree(out_dir, ignore_errors=True)
+        return {'status': 'completed', 'templates_discovered': templates_count}
+
+    except Exception as exc:
+        activity.logger.error(f"[RunActiveCertipyScanActivity] Activity failed: {exc}")
+        return {'status': 'failed', 'error': str(exc)}
+
+
 # ---------------------------------------------------------------------------
 # Workflow
 # ---------------------------------------------------------------------------
@@ -556,6 +742,21 @@ class ADAssessmentWorkflow:
                 start_to_close_timeout=timedelta(minutes=15),
                 retry_policy=_RETRY_STANDARD,
             )
+
+            if config.get('dc_ip'):
+                await workflow.execute_activity(
+                    run_active_ldap_scan_activity,
+                    {'assessment_id': assessment_id},
+                    start_to_close_timeout=timedelta(hours=1),
+                    retry_policy=_RETRY_STANDARD,
+                )
+
+                await workflow.execute_activity(
+                    run_active_certipy_scan_activity,
+                    {'assessment_id': assessment_id},
+                    start_to_close_timeout=timedelta(hours=1),
+                    retry_policy=_RETRY_STANDARD,
+                )
 
             await workflow.execute_activity(
                 run_trust_analysis_activity,

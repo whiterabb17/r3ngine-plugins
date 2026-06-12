@@ -123,6 +123,52 @@ class BloodHoundParser:
                 logger.warning(f"[BH] Failed to parse domain: {exc}")
         return results
 
+    @classmethod
+    def parse_gpos(cls, raw_gpos: List[dict]) -> List[dict]:
+        """Parse BloodHound GPO JSON entries.
+        
+        Args:
+            raw_gpos (list): List of raw GPO dicts from BloodHound.
+            
+        Returns:
+            list: List of parsed GPO dicts.
+        """
+        results = []
+        for entry in raw_gpos:
+            try:
+                props = cls._props(entry)
+                results.append({
+                    'name': props.get('name', ''),
+                    'guid': props.get('gpoidentity', props.get('objectid', '')),
+                })
+            except Exception as exc:
+                logger.warning(f"[BH] Failed to parse GPO: {exc}")
+        return results
+
+    @classmethod
+    def parse_certs(cls, raw_certs: List[dict]) -> List[dict]:
+        """Parse BloodHound Certificate Template JSON entries.
+        
+        Args:
+            raw_certs (list): List of raw certificate template dicts from BloodHound.
+            
+        Returns:
+            list: List of parsed certificate template dicts.
+        """
+        results = []
+        for entry in raw_certs:
+            try:
+                props = cls._props(entry)
+                results.append({
+                    'name': props.get('name', ''),
+                    'common_name': props.get('commonname', ''),
+                    'enrollee_supplies_subject': props.get('enrolleesuppliessubject', False),
+                    'client_authentication': props.get('clientauth', False),
+                })
+            except Exception as exc:
+                logger.warning(f"[BH] Failed to parse cert template: {exc}")
+        return results
+
     _ACE_RIGHT_NAMES = {
         'GenericAll', 'WriteDacl', 'WriteOwner',
         'ForceChangePassword', 'HasSession', 'AdminTo', 'AllowedToDelegate',
@@ -179,13 +225,26 @@ class BloodHoundParser:
     def ingest_from_directory(
             cls, directory: str, assessment_id: int,
             db_write: bool = True) -> Dict:
-        summary = {'users': 0, 'groups': 0, 'computers': 0, 'domains': 0, 'aces': 0}
+        """Parse all BloodHound JSON files in a directory and write to graph.
+        
+        Args:
+            directory (str): The directory containing BloodHound export JSONs.
+            assessment_id (int): Assessment context ID.
+            db_write (bool): True to save to database / Neo4j graph.
+            
+        Returns:
+            dict: Summary counts of ingested entities.
+        """
+        summary = {'users': 0, 'groups': 0, 'computers': 0, 'domains': 0, 'gpos': 0, 'certs': 0, 'aces': 0}
 
         parser_map = {
             'users.json': ('users', cls.parse_users),
             'groups.json': ('groups', cls.parse_groups),
             'computers.json': ('computers', cls.parse_computers),
             'domains.json': ('domains', cls.parse_domains),
+            'gpos.json': ('gpos', cls.parse_gpos),
+            'certs.json': ('certs', cls.parse_certs),
+            'certificatetemplates.json': ('certs', cls.parse_certs),
         }
 
         parsed = {}
@@ -197,17 +256,22 @@ class BloodHoundParser:
                     with open(filepath, 'r') as f:
                         raw = json.load(f)
                     entries = raw.get('data', raw) if isinstance(raw, dict) else raw
-                    parsed[key] = parser_fn(entries)
+                    parsed_entries = parser_fn(entries)
+                    if key in parsed:
+                        parsed[key].extend(parsed_entries)
+                    else:
+                        parsed[key] = parsed_entries
                     summary[key] = len(parsed[key])
                     if key in ('users', 'groups', 'computers'):
-                        for item, entry in zip(parsed[key], entries):
+                        for item, entry in zip(parsed_entries, entries):
                             sid = item.get('sid', '')
                             if sid:
                                 all_aces.extend(cls.parse_aces(entry, sid))
                 except Exception as exc:
                     logger.error(f"[BH] Failed to parse {filename}: {exc}")
             else:
-                parsed[key] = []
+                if key not in parsed:
+                    parsed[key] = []
 
         summary['aces'] = len(all_aces)
 
@@ -218,7 +282,14 @@ class BloodHoundParser:
 
     @classmethod
     def _write_to_graph(cls, assessment_id: int, parsed: dict,
-                        all_aces: list = None) -> None:
+                         all_aces: list = None) -> None:
+        """Write parsed BloodHound entities and ACL relationships to Neo4j.
+        
+        Args:
+            assessment_id (int): Assessment context ID.
+            parsed (dict): Dictionary of parsed entities by type.
+            all_aces (list, optional): List of extracted ACL edges.
+        """
         try:
             from ..graph.manager import ADGraphManager
             with ADGraphManager() as mgr:
@@ -246,6 +317,16 @@ class BloodHoundParser:
                                         f"[BH] Membership edge skipped (sid={member['sid']}): {exc}")
                 for computer in parsed.get('computers', []):
                     mgr.upsert_computer({**computer, 'assessment_id': assessment_id})
+                for gpo in parsed.get('gpos', []):
+                    try:
+                        mgr.upsert_gpo({**gpo, 'assessment_id': assessment_id})
+                    except Exception as exc:
+                        logger.warning(f"[BH] GPO write skipped: {exc}")
+                for cert in parsed.get('certs', []):
+                    try:
+                        mgr.upsert_certificate_template({**cert, 'assessment_id': assessment_id})
+                    except Exception as exc:
+                        logger.warning(f"[BH] Cert template write skipped: {exc}")
             if all_aces:
                 cls._write_acl_edges(assessment_id, all_aces)
         except Exception as exc:

@@ -112,15 +112,23 @@ class ReportingEngine:
 
     @staticmethod
     def _timeline(assessment) -> list:
+        """Fetch and compile the assessment timeline logs.
+
+        Args:
+            assessment (ADAssessment): The assessment instance to fetch timeline for.
+
+        Returns:
+            list: List of timeline events.
+        """
         try:
             from ..models import ADEvidenceLog
             entries = ADEvidenceLog.objects.filter(assessment=assessment).order_by('timestamp')
             return [
                 {
                     'timestamp': e.timestamp.isoformat(),
-                    'event_type': e.event_type,
-                    'actor': e.actor,
-                    'details': e.details,
+                    'event_type': e.action,
+                    'actor': e.actor.username if e.actor else "System",
+                    'details': e.detail,
                 }
                 for e in entries
             ]
