@@ -14,7 +14,7 @@ reNgine v3 introduces a modular plugin architecture that lets developers extend 
 
 ## Plugin Anatomy
 
-A reNgine plugin is a directory (packaged as a ZIP for distribution) with the following structure:
+A reNgine plugin is a directory (packaged as a custom signed ZIP [.r3n] for distribution) with the following structure:
 
 ```text
 my-plugin/
