@@ -39,6 +39,53 @@ interface DaPathRow {
   target: string;
   path_length: number;
   hops: { id: number; label: string; type: string }[];
+  metrics?: {
+    difficulty: number;
+    cost: number;
+    detection_risk: number;
+    time_hours: number;
+  };
+}
+
+function MetricBadge({ label, value, type }: { label: string; value: string | number; type: 'diff' | 'cost' | 'det' | 'time' }) {
+  const getColors = () => {
+    if (type === 'diff') {
+      const val = Number(value);
+      if (val <= 1) return { bg: 'rgba(0, 200, 83, 0.1)', color: '#00c853' };
+      if (val === 2) return { bg: 'rgba(33, 150, 243, 0.1)', color: '#2196f3' };
+      if (val === 3) return { bg: 'rgba(255, 152, 0, 0.1)', color: '#ff9800' };
+      return { bg: 'rgba(244, 67, 54, 0.1)', color: '#f44336' };
+    }
+    if (type === 'cost') {
+      const val = Number(value);
+      if (val === 0) return { bg: 'rgba(0, 200, 83, 0.1)', color: '#00c853' };
+      if (val <= 2) return { bg: 'rgba(255, 152, 0, 0.1)', color: '#ff9800' };
+      return { bg: 'rgba(244, 67, 54, 0.1)', color: '#f44336' };
+    }
+    if (type === 'det') {
+      const val = Number(value);
+      if (val === 0) return { bg: 'rgba(0, 200, 83, 0.1)', color: '#00c853' };
+      if (val === 1) return { bg: 'rgba(33, 150, 243, 0.1)', color: '#2196f3' };
+      if (val === 2) return { bg: 'rgba(255, 152, 0, 0.1)', color: '#ff9800' };
+      return { bg: 'rgba(244, 67, 54, 0.1)', color: '#f44336' };
+    }
+    return { bg: 'rgba(255, 255, 255, 0.05)', color: '#ffffff' };
+  };
+  const colors = getColors();
+  return (
+    <Chip
+      label={`${label}: ${value}`}
+      size="small"
+      sx={{
+        bgcolor: colors.bg,
+        color: colors.color,
+        border: `1px solid ${colors.color}20`,
+        fontFamily: 'monospace',
+        fontSize: '0.65rem',
+        height: 20,
+      }}
+    />
+  );
 }
 
 function DaPathsTab({ assessmentId }: { assessmentId: number }) {
@@ -78,9 +125,19 @@ function DaPathsTab({ assessmentId }: { assessmentId: number }) {
               <TableCell colSpan={5} sx={{ p: 0 }}>
                 <Collapse in={expanded === i} unmountOnExit>
                   <Box sx={{ px: 3, py: 1.5, background: 'rgba(0,229,255,0.04)' }}>
-                    <Typography variant="caption" sx={{ fontFamily: 'Orbitron', color: 'primary.main', mb: 1, display: 'block' }}>
-                      ATTACK PATH
-                    </Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, flexWrap: 'wrap', gap: 1 }}>
+                      <Typography variant="caption" sx={{ fontFamily: 'Orbitron', color: 'primary.main', display: 'block' }}>
+                        ATTACK PATH
+                      </Typography>
+                      {row.metrics && (
+                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                          <MetricBadge label="DIFFICULTY" value={row.metrics.difficulty} type="diff" />
+                          <MetricBadge label="COST" value={row.metrics.cost} type="cost" />
+                          <MetricBadge label="DETECTION" value={row.metrics.detection_risk} type="det" />
+                          <MetricBadge label="TIME" value={`${row.metrics.time_hours}h`} type="time" />
+                        </Box>
+                      )}
+                    </Box>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
                       {(row.hops ?? []).map((hop, hi) => (
                         <Box key={hi} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>

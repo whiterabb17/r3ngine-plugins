@@ -145,6 +145,56 @@ class ADGraphManager:
             record = result.single()
             return record['node_id'] if record else None
 
+    def upsert_certificate_template(self, props: Dict[str, Any]) -> Optional[int]:
+        """MERGE ADCertificate template by name and assessment_id.
+        
+        Args:
+            props (dict): Dictionary of template properties.
+            
+        Returns:
+            int: Neo4j node ID on success, or None.
+        """
+        with self._driver.session() as session:
+            result = session.run(
+                f"""
+                MERGE (n:{s.ADCertificateNode} {{
+                    name: $name, assessment_id: $assessment_id
+                }})
+                SET n += $props
+                RETURN id(n) AS node_id
+                """,
+                name=props['name'],
+                assessment_id=props['assessment_id'],
+                props=props,
+            )
+            record = result.single()
+            return record['node_id'] if record else None
+
+    def upsert_gpo(self, props: Dict[str, Any]) -> Optional[int]:
+        """MERGE ADPolicy (GPO) by guid and assessment_id.
+        
+        Args:
+            props (dict): Dictionary of GPO properties.
+            
+        Returns:
+            int: Neo4j node ID on success, or None.
+        """
+        with self._driver.session() as session:
+            result = session.run(
+                f"""
+                MERGE (n:{s.ADPolicyNode} {{
+                    guid: $guid, assessment_id: $assessment_id
+                }})
+                SET n += $props
+                RETURN id(n) AS node_id
+                """,
+                guid=props['guid'],
+                assessment_id=props['assessment_id'],
+                props=props,
+            )
+            record = result.single()
+            return record['node_id'] if record else None
+
     # ------------------------------------------------------------------
     # Relationship creation
     # ------------------------------------------------------------------
@@ -232,6 +282,52 @@ class ADGraphManager:
                 """,
                 src_sid=source_sid,
                 tgt_sid=target_sid,
+                aid=assessment_id,
+            )
+
+    def create_gpo_link(
+            self, gpo_guid: str, target_sid: str,
+            target_label: str, assessment_id: int) -> None:
+        """Create AD_GPO_APPLIED_TO relationship between ADPolicy (GPO) and a target.
+
+        Args:
+            gpo_guid (str): GUID of the GPO object.
+            target_sid (str): SID of the target AD object.
+            target_label (str): Label of the target object (e.g. ADDomain, ADOU, ADComputer).
+            assessment_id (int): Assessment context ID.
+        """
+        with self._driver.session() as session:
+            session.run(
+                f"""
+                MATCH (g:{s.ADPolicyNode} {{guid: $guid, assessment_id: $aid}})
+                MATCH (t:{target_label} {{sid: $tsid, assessment_id: $aid}})
+                MERGE (g)-[:AD_GPO_APPLIED_TO]->(t)
+                """,
+                guid=gpo_guid,
+                tsid=target_sid,
+                aid=assessment_id,
+            )
+
+    def create_enroll_link(
+            self, principal_sid: str, principal_label: str,
+            template_name: str, assessment_id: int) -> None:
+        """Create AD_ENROLLS relationship between a principal and ADCertificate.
+
+        Args:
+            principal_sid (str): SID of the user or group principal.
+            principal_label (str): Label of the principal (e.g. ADUser, ADGroup).
+            template_name (str): Name of the certificate template.
+            assessment_id (int): Assessment context ID.
+        """
+        with self._driver.session() as session:
+            session.run(
+                f"""
+                MATCH (p:{principal_label} {{sid: $psid, assessment_id: $aid}})
+                MATCH (c:{s.ADCertificateNode} {{name: $cname, assessment_id: $aid}})
+                MERGE (p)-[:AD_ENROLLS]->(c)
+                """,
+                psid=principal_sid,
+                cname=template_name,
                 aid=assessment_id,
             )
 
@@ -365,7 +461,19 @@ class ADGraphManager:
     # ------------------------------------------------------------------
 
     def find_da_paths(self, assessment_id: int, max_hops: int = 10) -> List[Dict]:
-        """Shortest paths from non-admin users to Domain Admins group."""
+        """Shortest paths from non-admin users to Domain Admins group.
+
+        Queries the Neo4j database to find paths from non-administrative users to the
+        highly privileged 'Domain Admins' group. It also retrieves edge types to compute
+        aggregate metrics (difficulty, cost, detection risk, time_hours) for each path.
+
+        Args:
+            assessment_id (int): The ID of the assessment context.
+            max_hops (int): Maximum hop limit for the Cypher query.
+
+        Returns:
+            list: List of dictionaries representing the paths, their hops, and calculated metrics.
+        """
         try:
             with self._driver.session() as session:
                 result = session.run(
@@ -379,20 +487,53 @@ class ADGraphManager:
                            length(p) AS path_length,
                            [n IN nodes(p) | {{id: id(n),
                              label: coalesce(n.sam_account_name, n.name, n.fqdn),
-                             type: labels(n)[0]}}] AS hops
+                             type: labels(n)[0]}}] AS hops,
+                           [r IN relationships(p) | type(r)] AS edge_types
                     ORDER BY path_length ASC LIMIT 50
                     """,
                     aid=assessment_id,
                 )
-                return [
-                    {
+                
+                paths = []
+                for r in result:
+                    # Map each edge type to difficulty (1-5), cost (0-4), detection risk (0-4), and time (hours)
+                    edge_metrics = {
+                        'AD_MEMBER_OF': {'diff': 1, 'cost': 0, 'det': 0, 'time': 0.1},
+                        'AD_ADMIN_TO': {'diff': 2, 'cost': 1, 'det': 2, 'time': 1.0},
+                        'AD_HAS_SESSION': {'diff': 2, 'cost': 1, 'det': 2, 'time': 1.0},
+                        'AD_GENERIC_ALL': {'diff': 3, 'cost': 1, 'det': 3, 'time': 2.0},
+                        'AD_WRITE_DACL': {'diff': 3, 'cost': 1, 'det': 3, 'time': 2.0},
+                        'AD_WRITE_OWNER': {'diff': 3, 'cost': 1, 'det': 3, 'time': 2.0},
+                        'AD_FORCE_CHANGE_PW': {'diff': 3, 'cost': 0, 'det': 3, 'time': 1.0},
+                        'AD_ALLOWED_TO_DELEGATE': {'diff': 4, 'cost': 2, 'det': 1, 'time': 4.0},
+                    }
+                    
+                    edge_types = r.get('edge_types', [])
+                    diffs = [1]
+                    costs = [0]
+                    dets = [0]
+                    times = [0.0]
+                    
+                    for etype in edge_types:
+                        m = edge_metrics.get(etype, {'diff': 2, 'cost': 0, 'det': 2, 'time': 1.0})
+                        diffs.append(m['diff'])
+                        costs.append(m['cost'])
+                        dets.append(m['det'])
+                        times.append(m['time'])
+                    
+                    paths.append({
                         'source': r['source'],
                         'target': r['target'],
                         'path_length': r['path_length'],
                         'hops': r['hops'],
-                    }
-                    for r in result
-                ]
+                        'metrics': {
+                            'difficulty': max(diffs),
+                            'cost': sum(costs),
+                            'detection_risk': max(dets),
+                            'time_hours': sum(times)
+                        }
+                    })
+                return paths
         except Exception as exc:
             logger.warning(f"[ADGraph] find_da_paths failed: {exc}")
             return []

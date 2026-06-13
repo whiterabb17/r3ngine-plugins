@@ -164,11 +164,23 @@ def build_plugin(plugin_slug, sign=True):
 
 if __name__ == '__main__':
     root_dir = os.path.dirname(os.path.abspath(__file__))
-    plugins = [
-        d for d in os.listdir(root_dir)
-        if os.path.isdir(os.path.join(root_dir, d))
-        and os.path.exists(os.path.join(root_dir, d, 'manifest.yaml'))
-    ]
+    
+    if len(sys.argv) > 1:
+        plugins = sys.argv[1:]
+        valid_plugins = []
+        for p in plugins:
+            p_clean = os.path.basename(os.path.normpath(p))
+            if os.path.isdir(os.path.join(root_dir, p_clean)) and os.path.exists(os.path.join(root_dir, p_clean, 'manifest.yaml')):
+                valid_plugins.append(p_clean)
+            else:
+                print(f"[!] Skipping '{p}': Directory '{p_clean}' not found or missing manifest.yaml")
+        plugins = valid_plugins
+    else:
+        plugins = [
+            d for d in os.listdir(root_dir)
+            if os.path.isdir(os.path.join(root_dir, d))
+            and os.path.exists(os.path.join(root_dir, d, 'manifest.yaml'))
+        ]
 
     if not plugins:
         print("No plugins found to build.")

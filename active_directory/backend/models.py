@@ -119,6 +119,8 @@ class ADExposure(models.Model):
         ADDomain, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='exposures')
     risk_score = models.FloatField(default=0.0)
+    is_internet_facing = models.BooleanField(default=False, help_text="True if the exposed host is externally reachable from the internet")
+    service_banner = models.TextField(blank=True, null=True, help_text="Raw service banner or signature identified on the exposed port")
     evidence = models.JSONField(default=dict)
     discovered_at = models.DateTimeField(default=timezone.now)
 

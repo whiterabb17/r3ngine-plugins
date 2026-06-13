@@ -1,6 +1,6 @@
 name: "Active Directory"
 description: "Enterprise AD assessment, identity intelligence, and exposure management plugin for contracted penetration testing and consulting engagements."
-version: "1.0.0"
+version: "1.1.0"
 author: "MistrHyde"
 icon: "icon.png"
 
@@ -21,6 +21,8 @@ temporal:
     - "backend.temporal_exports.run_neo4j_sync_activity"
     - "backend.temporal_exports.finalize_assessment_activity"
     - "backend.temporal_exports.run_ingestion_activity"
+    - "backend.temporal_exports.run_active_ldap_scan_activity"
+    - "backend.temporal_exports.run_active_certipy_scan_activity"
 
 ui:
   menu_item: "AD Intelligence"

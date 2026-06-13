@@ -89,6 +89,15 @@ EXPOSURE_PROPERTIES = {
     'exposure_type': str, 'risk_score': float, 'assessment_id': int,
 }
 
+CERTIFICATE_PROPERTIES = {
+    'name': str, 'common_name': str, 'enrollee_supplies_subject': bool,
+    'client_authentication': bool, 'assessment_id': int,
+}
+
+POLICY_PROPERTIES = {
+    'name': str, 'guid': str, 'assessment_id': int,
+}
+
 # ---------------------------------------------------------------------------
 # Constraint and index statements
 # ---------------------------------------------------------------------------
@@ -114,6 +123,12 @@ CONSTRAINT_STATEMENTS = [
 
     "CREATE CONSTRAINT ad_finding_unique IF NOT EXISTS "
     "FOR (n:ADFinding) REQUIRE (n.finding_id, n.assessment_id) IS UNIQUE",
+
+    "CREATE CONSTRAINT ad_certificate_name_unique IF NOT EXISTS "
+    "FOR (n:ADCertificate) REQUIRE (n.name, n.assessment_id) IS UNIQUE",
+
+    "CREATE CONSTRAINT ad_policy_guid_unique IF NOT EXISTS "
+    "FOR (n:ADPolicy) REQUIRE (n.guid, n.assessment_id) IS UNIQUE",
 
     "CREATE CONSTRAINT ad_acl_generic_all_unique IF NOT EXISTS "
     "FOR ()-[r:AD_GENERIC_ALL]-() REQUIRE (r.source_sid, r.target_sid, r.assessment_id) IS UNIQUE",
@@ -146,6 +161,12 @@ INDEX_STATEMENTS = [
 
     "CREATE INDEX ad_finding_severity_idx IF NOT EXISTS "
     "FOR (n:ADFinding) ON (n.severity, n.assessment_id)",
+
+    "CREATE INDEX ad_certificate_assessment_idx IF NOT EXISTS "
+    "FOR (n:ADCertificate) ON (n.assessment_id)",
+
+    "CREATE INDEX ad_policy_assessment_idx IF NOT EXISTS "
+    "FOR (n:ADPolicy) ON (n.assessment_id)",
 ]
 
 SCHEMA_STATEMENTS = CONSTRAINT_STATEMENTS + INDEX_STATEMENTS
