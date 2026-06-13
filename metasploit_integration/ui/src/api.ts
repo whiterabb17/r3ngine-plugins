@@ -17,6 +17,7 @@ export async function fetchWithAuth(url: string, options?: RequestInit) {
         credentials: 'include',
         ...options,
         headers: {
+            'Accept': 'application/json',
             'Content-Type': 'application/json',
             'X-CSRFToken': getCsrfToken(),
             ...(options?.headers || {}),
