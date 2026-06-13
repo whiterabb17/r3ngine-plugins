@@ -28,6 +28,9 @@ Before committing any plugin changes, verify the following:
 - [ ] **Temporal Determinism**: Workflows must be 100% deterministic (no database operations, no API requests, no local file writes, no non-deterministic time or randomness).
 - [ ] **Database Connection Closures**: Enforce explicit connection closing via `django.db.connection.close()` before launching subprocesses inside activities.
 - [ ] **Subprocess Migrations**: Run migrations dynamically on installation outside active transaction blocks.
+- [ ] **Docker Socket & Command Sanitization**: Validate and sanitize all parameters passed to the Docker SDK or subprocess commands.
+- [ ] **Data Encryption at Rest**: Encrypt all sensitive data (credentials, keys, tokens) using database encryption fields.
+- [ ] **API Access Controls**: Explicitly define permission classes on all endpoints (never leave views default-open).
 
 ---
 
@@ -49,3 +52,9 @@ For comprehensive instructions, code templates, and design patterns, refer to th
 * Creating deterministic workflows and asynchronous side-effecting activities.
 * Safe ORM interactions and preventing connection pool leaks.
 * Dynamic migration setup and validation patterns.
+
+### 4. [Plugin Security Guidelines](file:///d:/Repos/r3ngine/r3ngine-plugins/.claude/skills/developing-r3ngine-plugins/references/security.md)
+* Mitigating Docker daemon privilege escalation risks.
+* Restricting view endpoints with Role-Based Access Controls (RBAC).
+* Enforcing encrypted fields for sensitive database records.
+* Preventing path traversal and parameter injection.
