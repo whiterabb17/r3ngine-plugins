@@ -22,17 +22,25 @@ import {
   Alert,
   CircularProgress,
   Stack,
-  IconButton
+  IconButton,
+  Tabs,
+  Tab
 } from '@mui/material';
-import { Shield, ShieldAlert, Play, Key, Activity, Target, Terminal, X, RefreshCw } from 'lucide-react';
-import { useTasks, useCreateTask, useExecuteTask } from '../api';
+import { Shield, ShieldAlert, Play, Key, Activity, Target, Terminal, X, RefreshCw, Layers, Database, Cpu } from 'lucide-react';
+import { useTasks, useCreateTask, useExecuteTask, useCredentials, useCoreWordlists } from '../api';
+import { WordlistManager } from './WordlistManager';
+import { CrackingDashboard } from './CrackingDashboard';
 
 const Dashboard: React.FC = () => {
-  const { data: tasks, isLoading, refetch } = useTasks();
+  const { data: tasks, isLoading: isTasksLoading, refetch: refetchTasks } = useTasks();
+  const { data: credentials, isLoading: isCredsLoading, refetch: refetchCreds } = useCredentials();
+  const { data: wordlists } = useCoreWordlists();
+
   const createTask = useCreateTask();
   const executeTask = useExecuteTask();
   
   const [open, setOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
   const [formData, setFormData] = useState({
     name: '',
     tool: 'brutus',
@@ -43,6 +51,11 @@ const Dashboard: React.FC = () => {
     threads: 5,
     additional_flags: ''
   });
+
+  const handleRefreshAll = () => {
+    refetchTasks();
+    refetchCreds();
+  };
 
   const handleSubmit = async () => {
     try {
@@ -61,15 +74,15 @@ const Dashboard: React.FC = () => {
     if (!tasks) return { total: 0, completed: 0, found: 0 };
     const total = tasks.length;
     const completed = tasks.filter((t: any) => t.status === 'completed').length;
-    const found = tasks.reduce((acc: number, t: any) => acc + (t.credentials_found || 0), 0);
+    const found = credentials?.length || 0;
     return { total, completed, found };
-  }, [tasks]);
+  }, [tasks, credentials]);
 
   return (
-    <Box sx={{ p: 4, display: 'flex', flexDirection: 'column', gap: 4, minHeight: '100vh', bgcolor: '#07070c' }}>
+    <Box sx={{ p: 4, display: 'flex', flexDirection: 'column', gap: 4, minHeight: '100vh', bgcolor: '#07070c', color: '#fff' }}>
       
       {/* Title Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography 
             variant="h4" 
@@ -134,85 +147,173 @@ const Dashboard: React.FC = () => {
         </Grid>
       </Grid>
 
-      {/* Main Table Panel */}
-      <Card sx={{ 
-        background: 'linear-gradient(135deg, rgba(20, 15, 30, 0.7) 0%, rgba(10, 10, 15, 0.9) 100%)', 
-        backdropFilter: 'blur(20px)', 
-        border: '1px solid rgba(0, 243, 255, 0.15)', 
-        borderRadius: '16px',
-        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)'
-      }}>
-        <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            <Terminal size={18} color="#00f3ff" />
-            <Typography sx={{ fontFamily: 'Orbitron', fontWeight: 900, color: '#fff', letterSpacing: 1, fontSize: '0.85rem' }}>
-              AUDIT QUEUE
-            </Typography>
-          </Stack>
-          <IconButton onClick={() => refetch()} size="small" sx={{ color: '#00f3ff' }}>
-            <RefreshCw size={16} />
-          </IconButton>
-        </Box>
+      {/* Navigation Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'rgba(255, 255, 255, 0.05)' }}>
+        <Tabs 
+          value={activeTab} 
+          onChange={(_, val) => setActiveTab(val)}
+          sx={{
+            '& .MuiTabs-indicator': { bgcolor: '#00f3ff', height: 3 },
+            '& .MuiTab-root': {
+              color: 'rgba(255,255,255,0.4)',
+              fontFamily: 'Orbitron',
+              fontWeight: 900,
+              fontSize: '0.8rem',
+              '&.Mui-selected': { color: '#00f3ff' }
+            }
+          }}
+        >
+          <Tab icon={<Layers size={16} style={{ marginRight: 8 }} />} iconPosition="start" label="AUDIT SYSTEM" />
+          <Tab icon={<Database size={16} style={{ marginRight: 8 }} />} iconPosition="start" label="CUSTOM WORDLISTS" />
+          <Tab icon={<Cpu size={16} style={{ marginRight: 8 }} />} iconPosition="start" label="OFFLINE CRACKING" />
+        </Tabs>
+      </Box>
 
-        <TableContainer sx={{ maxHeight: 600 }}>
-          <Table stickyHeader>
-            <TableHead>
-              <TableRow>
-                {['Task Name', 'Tool', 'Target', 'Status', 'Credentials Found', 'Actions'].map((head) => (
-                  <TableCell key={head} sx={{ bgcolor: 'transparent', color: 'rgba(255,255,255,0.4)', fontFamily: 'Orbitron', fontWeight: 800, fontSize: '0.65rem', borderBottom: '1px solid rgba(255,255,255,0.05)', textTransform: 'uppercase' }}>
-                    {head}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={6} align="center"><CircularProgress sx={{ color: '#00f3ff' }} /></TableCell></TableRow>
-              ) : tasks?.map((task: any) => (
-                <TableRow key={task.id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                  <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.02)' }}>{task.name}</TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.7)', borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                    <Chip size="small" label={task.tool.toUpperCase()} sx={{ bgcolor: 'rgba(0, 243, 255, 0.1)', color: '#00f3ff', border: '1px solid rgba(0, 243, 255, 0.2)', fontSize: '0.6rem', fontFamily: 'monospace', fontWeight: 700 }} />
-                  </TableCell>
-                  <TableCell sx={{ color: '#00f3ff', borderBottom: '1px solid rgba(255,255,255,0.02)', fontFamily: 'monospace', fontSize: '0.75rem' }}>{task.target}</TableCell>
-                  <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                    <Chip 
-                      label={task.status.toUpperCase()} 
-                      sx={{
-                        bgcolor: task.status === 'completed' ? 'rgba(0, 255, 98, 0.15)' : task.status === 'running' ? 'rgba(0, 243, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                        color: task.status === 'completed' ? '#00ff62' : task.status === 'running' ? '#00f3ff' : 'rgba(255,255,255,0.5)',
-                        border: `1px solid ${task.status === 'completed' ? '#00ff62' : task.status === 'running' ? '#00f3ff' : 'rgba(255,255,255,0.1)'}66`,
-                        fontFamily: 'Orbitron',
-                        fontSize: '0.6rem',
-                        fontWeight: 900,
-                        height: 20
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ color: task.credentials_found > 0 ? '#00ff62' : 'rgba(255,255,255,0.3)', fontWeight: 800, borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                    {task.credentials_found || 0}
-                  </TableCell>
-                  <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                    {task.status === 'pending' && (
-                      <Button 
-                        size="small" 
-                        onClick={() => executeTask.mutate(task.id)} 
-                        startIcon={<Play size={14}/>}
-                        sx={{ color: '#00f3ff', fontSize: '0.65rem', fontFamily: 'Orbitron', fontWeight: 800 }}
-                      >
-                        Start
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {!isLoading && (!tasks || tasks.length === 0) && (
-                <TableRow><TableCell colSpan={6} align="center" sx={{ color: 'rgba(255,255,255,0.4)', py: 6, borderBottom: 'none' }}>No tasks found. Create one to get started.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Card>
+      {/* Tab Panel Render */}
+      {activeTab === 0 && (
+        <Stack spacing={4}>
+          {/* Main Tasks Table Panel */}
+          <Card sx={{ 
+            background: 'linear-gradient(135deg, rgba(20, 15, 30, 0.7) 0%, rgba(10, 10, 15, 0.9) 100%)', 
+            backdropFilter: 'blur(20px)', 
+            border: '1px solid rgba(0, 243, 255, 0.15)', 
+            borderRadius: '16px',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)'
+          }}>
+            <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <Terminal size={18} color="#00f3ff" />
+                <Typography sx={{ fontFamily: 'Orbitron', fontWeight: 900, color: '#fff', letterSpacing: 1, fontSize: '0.85rem' }}>
+                  AUDIT QUEUE
+                </Typography>
+              </Stack>
+              <IconButton onClick={handleRefreshAll} size="small" sx={{ color: '#00f3ff' }}>
+                <RefreshCw size={16} />
+              </IconButton>
+            </Box>
+
+            <TableContainer sx={{ maxHeight: 400 }}>
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    {['Task Name', 'Tool', 'Target', 'Status', 'Credentials Found', 'Actions'].map((head) => (
+                      <TableCell key={head} sx={{ bgcolor: 'transparent', color: 'rgba(255,255,255,0.4)', fontFamily: 'Orbitron', fontWeight: 800, fontSize: '0.65rem', borderBottom: '1px solid rgba(255,255,255,0.05)', textTransform: 'uppercase' }}>
+                        {head}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {isTasksLoading ? (
+                    <TableRow><TableCell colSpan={6} align="center"><CircularProgress sx={{ color: '#00f3ff' }} /></TableCell></TableRow>
+                  ) : tasks?.map((task: any) => (
+                    <TableRow key={task.id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                      <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.02)' }}>{task.name}</TableCell>
+                      <TableCell sx={{ color: 'rgba(255,255,255,0.7)', borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                        <Chip size="small" label={task.tool.toUpperCase()} sx={{ bgcolor: 'rgba(0, 243, 255, 0.1)', color: '#00f3ff', border: '1px solid rgba(0, 243, 255, 0.2)', fontSize: '0.6rem', fontFamily: 'monospace', fontWeight: 700 }} />
+                      </TableCell>
+                      <TableCell sx={{ color: '#00f3ff', borderBottom: '1px solid rgba(255,255,255,0.02)', fontFamily: 'monospace', fontSize: '0.75rem' }}>{task.target}</TableCell>
+                      <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                        <Chip 
+                          label={task.status.toUpperCase()} 
+                          sx={{
+                            bgcolor: task.status === 'completed' ? 'rgba(0, 255, 98, 0.15)' : task.status === 'running' ? 'rgba(0, 243, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                            color: task.status === 'completed' ? '#00ff62' : task.status === 'running' ? '#00f3ff' : 'rgba(255,255,255,0.5)',
+                            border: `1px solid ${task.status === 'completed' ? '#00ff62' : task.status === 'running' ? '#00f3ff' : 'rgba(255,255,255,0.1)'}66`,
+                            fontFamily: 'Orbitron',
+                            fontSize: '0.6rem',
+                            fontWeight: 900,
+                            height: 20
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ color: task.credentials_found > 0 ? '#00ff62' : 'rgba(255,255,255,0.3)', fontWeight: 800, borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                        {task.credentials_found || 0}
+                      </TableCell>
+                      <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                        {task.status === 'pending' && (
+                          <Button 
+                            size="small" 
+                            onClick={() => executeTask.mutate(task.id)} 
+                            startIcon={<Play size={14}/>}
+                            sx={{ color: '#00f3ff', fontSize: '0.65rem', fontFamily: 'Orbitron', fontWeight: 800 }}
+                          >
+                            Start
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {!isTasksLoading && (!tasks || tasks.length === 0) && (
+                    <TableRow><TableCell colSpan={6} align="center" sx={{ color: 'rgba(255,255,255,0.4)', py: 6 }}>No tasks found. Create one to get started.</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Card>
+
+          {/* Credentials Found Table */}
+          <Card sx={{ 
+            background: 'linear-gradient(135deg, rgba(20, 15, 30, 0.7) 0%, rgba(10, 10, 15, 0.9) 100%)', 
+            backdropFilter: 'blur(20px)', 
+            border: '1px solid rgba(0, 255, 98, 0.15)', 
+            borderRadius: '16px',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)'
+          }}>
+            <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <Key size={18} color="#00ff62" />
+                <Typography sx={{ fontFamily: 'Orbitron', fontWeight: 900, color: '#fff', letterSpacing: 1, fontSize: '0.85rem' }}>
+                  DISCOVERED CREDENTIALS
+                </Typography>
+              </Stack>
+            </Box>
+
+            <TableContainer sx={{ maxHeight: 400 }}>
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    {['Username', 'Decrypted Password', 'Hash Value', 'Service', 'Port', 'Discovered'].map((head) => (
+                      <TableCell key={head} sx={{ bgcolor: 'transparent', color: 'rgba(255,255,255,0.4)', fontFamily: 'Orbitron', fontWeight: 800, fontSize: '0.65rem', borderBottom: '1px solid rgba(255,255,255,0.05)', textTransform: 'uppercase' }}>
+                        {head}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {isCredsLoading ? (
+                    <TableRow><TableCell colSpan={6} align="center"><CircularProgress sx={{ color: '#00ff62' }} /></TableCell></TableRow>
+                  ) : credentials?.map((cred: any) => (
+                    <TableRow key={cred.id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                      <TableCell sx={{ color: '#fff', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.02)' }}>{cred.username}</TableCell>
+                      <TableCell sx={{ color: '#00ff62', fontFamily: 'monospace', borderBottom: '1px solid rgba(255,255,255,0.02)' }}>{cred.password || 'N/A'}</TableCell>
+                      <TableCell sx={{ color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace', fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.02)' }}>{cred.hash_value || 'N/A'}</TableCell>
+                      <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                        <Chip size="small" label={cred.service.toUpperCase()} sx={{ bgcolor: 'rgba(0, 255, 98, 0.1)', color: '#00ff62', border: '1px solid rgba(0, 255, 98, 0.2)', fontSize: '0.6rem', fontWeight: 700 }} />
+                      </TableCell>
+                      <TableCell sx={{ color: 'rgba(255,255,255,0.8)', borderBottom: '1px solid rgba(255,255,255,0.02)' }}>{cred.port || 'N/A'}</TableCell>
+                      <TableCell sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                        {new Date(cred.discovered_at).toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {!isCredsLoading && (!credentials || credentials.length === 0) && (
+                    <TableRow><TableCell colSpan={6} align="center" sx={{ color: 'rgba(255,255,255,0.4)', py: 6 }}>No credentials discovered yet.</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Card>
+        </Stack>
+      )}
+
+      {activeTab === 1 && (
+        <WordlistManager />
+      )}
+
+      {activeTab === 2 && (
+        <CrackingDashboard />
+      )}
 
       {/* New Task Modal */}
       <Dialog 
@@ -266,16 +367,26 @@ const Dashboard: React.FC = () => {
                     fullWidth label="Target (URL/IP/Domain)" size="small"
                     value={formData.target} onChange={(e: any) => setFormData({...formData, target: e.target.value})}
                   />
+                  
+                  {/* Custom Wordlist Dropdowns */}
                   <StyledTextField 
-                    fullWidth label="Wordlist (Users)" size="small"
-                    placeholder="/wordlists/users.txt"
+                    fullWidth select label="Wordlist (Users)" size="small"
                     value={formData.wordlist_user} onChange={(e: any) => setFormData({...formData, wordlist_user: e.target.value})}
-                  />
+                  >
+                    <MenuItem value="">-- Select custom wordlist --</MenuItem>
+                    {wordlists?.map((wl: any) => (
+                      <MenuItem key={wl.id} value={wl.short_name}>{wl.name}</MenuItem>
+                    ))}
+                  </StyledTextField>
                   <StyledTextField 
-                    fullWidth label="Wordlist (Passwords)" size="small"
-                    placeholder="/wordlists/passwords.txt"
+                    fullWidth select label="Wordlist (Passwords)" size="small"
                     value={formData.wordlist_pass} onChange={(e: any) => setFormData({...formData, wordlist_pass: e.target.value})}
-                  />
+                  >
+                    <MenuItem value="">-- Select custom wordlist --</MenuItem>
+                    {wordlists?.map((wl: any) => (
+                      <MenuItem key={wl.id} value={wl.short_name}>{wl.name}</MenuItem>
+                    ))}
+                  </StyledTextField>
                 </Stack>
               </Grid>
 

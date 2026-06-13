@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="#" target="_blank">
-    <img src="https://img.shields.io/badge/plugin-v1.0.0-informational?&logo=none" alt="Version" />
+    <img src="https://img.shields.io/badge/plugin-v1.4.0-informational?&logo=none" alt="Version" />
   </a>
   &nbsp;
   <a href="#" target="_blank">
@@ -51,12 +51,17 @@ The **Credential Intelligence** plugin is a dedicated assessment environment for
 *   **Web Auth**: Execute brutus for HTTP basic auth and form-based authentication testing.
 *   **Network Auth**: Run NetExec (SMB, WMI, SSH) to validate credentials across internal and external infrastructure.
 *   **Active Directory Auth**: Perform Kerberos pre-auth brute forcing with Kerbrute.
-*   **Offline Cracking**: Integrated Hashcat support for offline hash cracking with standard wordlists.
+*   **Offline Cracking**: Integrated containerized Hashcat support for offline hash cracking with standard or custom wordlists.
+
+### 📁 Wordlist Customization
+*   **Add/Edit/Delete**: Complete management interface to upload `.txt` custom wordlists, list registered ones, and delete them when no longer needed.
+*   **Dynamic Matching**: Custom wordlists are dynamically populated inside tool execution task forms.
 
 ### 🛡️ Secure Execution (OpSec)
 *   **Command Sanitization**: Strict subprocess command list construction via `shlex` and typed parameters to prevent injection.
-*   **Isolated Sandboxing**: Executes tools via Temporal workers within isolated environments.
-*   **Artifact Cleanup**: Temporary payloads and credential dumps are securely unlinked upon task completion.
+*   **Isolated Sandboxing**: Executes tools via Temporal workers or detached secure Docker containers on the host daemon.
+*   **Device Detection**: Automatically detects host GPU capabilities to request graphics runtimes, falling back gracefully to CPU threads if GPUs are absent.
+*   **Artifact Cleanup**: Temporary payloads, hashes text, and credential dumps are securely unlinked upon task completion.
 
 ### 📊 Real-Time Reporting
 *   **Encrypted Storage**: Credentials and sensitive findings are encrypted at rest using `EncryptedCharField`.
@@ -71,7 +76,7 @@ The **Credential Intelligence** plugin is a dedicated assessment environment for
 |------|---------|---------|
 | `netexec` | SMB, WMI, SSH auth testing | `pipx install git+https://github.com/Pennyw0rth/NetExec` |
 | `kerbrute` | Active Directory Kerberos auth | `wget` (pre-compiled binary) |
-| `hashcat` | Offline hash cracking | `apt-get install hashcat` |
+| `hashcat` | Offline hash cracking | Automatically handled via `hashcat/hashcat:latest` Docker image |
 | `brutus` | Web authentication testing | Built-in |
 
 Tools are registered in [`tools.yaml`](tools.yaml) and installed automatically by the r3ngine plugin loader at container startup. No manual installation is required.
@@ -86,8 +91,13 @@ All endpoints are mounted under `/api/plugins/credential_intelligence/`.
 |--------|----------|-------------|
 | `GET/POST` | `tasks/` | List or create credential assessment tasks. |
 | `GET` | `tasks/{id}/` | Retrieve task details and status. |
-| `POST` | `tasks/{id}/start/` | Launch Temporal workflow for execution. |
-| `GET` | `discovered/` | View decrypted, discovered credentials. |
+| `POST` | `tasks/{id}/execute/` | Launch Temporal workflow for execution. |
+| `GET` | `credentials/` | View decrypted, discovered credentials. |
+| `GET/POST` | `cracking/` | List or create offline Hashcat tasks. |
+| `POST` | `cracking/{id}/execute/` | Spin up a detached Hashcat container (GPU/CPU fallback). |
+| `GET` | `cracking/{id}/status_info/` | Fetch live stdout log stream and progress statistics. |
+| `POST` | `cracking/{id}/cancel/` | Stop and remove active Hashcat container. |
+| `GET` | `cracking/{id}/cracked_hashes/` | List cracked plaintext passphrases. |
 
 ![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/aqua.png)
 
@@ -114,6 +124,38 @@ flowchart TD
     FINAL[finalize_task_activity\nSet COMPLETED, emit WebSocket event]
 
     FINAL --> DONE([✓ Done])
+```
+
+![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/aqua.png)
+
+## Offline Cracking Architecture
+
+The containerized Hashcat offline cracking subsystem manages GPU/CPU container lifecycles directly using the host's Docker socket:
+
+```mermaid
+sequenceDiagram
+    participant UI as Plugin UI (React)
+    participant API as Plugin View (Django)
+    participant SDK as Docker SDK (Python)
+    participant Host as Docker Daemon
+    participant Container as GPU Hashcat Container
+
+    UI->>API: POST /api/plugins/credential_intelligence/cracking/ (params & hashes)
+    API->>API: Validate parameters (RBAC: IsPenetrationTester)
+    API->>SDK: docker.from_env()
+    API->>SDK: Check GPU capabilities
+    API->>Host: Run container (with GPU device requests if available)
+    Host->>Container: Spawn hashcat container (bind mount wordlist & hashes)
+    API->>UI: Response (cracking task ID)
+    loop Every 5 seconds
+        UI->>API: GET /api/plugins/credential_intelligence/cracking/{id}/status/
+        API->>SDK: Query container logs/status
+        SDK->>API: Container output
+        API->>UI: Status (live progress, cracked count)
+    end
+    Container->>Host: Crack completed / terminated
+    API->>API: Parse hashcat output file & save plaintexts using EncryptedCharField
+    API->>Host: Remove container
 ```
 
 ![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/aqua.png)

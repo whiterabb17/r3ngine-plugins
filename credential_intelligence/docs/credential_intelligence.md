@@ -11,6 +11,36 @@ This plugin offloads task execution to the backend using Temporal workflows. Exe
 3. **OpSec Enforcement:** The activity wraps the chosen security tool inside `CredentialOpSecManager`, enforcing strict TOR routing, exit node rotation, and traffic obfuscation to avoid detection.
 4. **Execution and Parsing:** The wrapped tool runs, output is parsed in real time or upon completion, and parsed results are stored in the database.
 
+### Offline Cracking Container Lifecycle
+
+For offline hash cracking, the system bypasses Temporal and spins up a dedicated container using the Docker SDK:
+
+```mermaid
+sequenceDiagram
+    participant UI as Plugin UI (React)
+    participant API as Plugin View (Django)
+    participant SDK as Docker SDK (Python)
+    participant Host as Docker Daemon
+    participant Container as GPU Hashcat Container
+
+    UI->>API: POST /api/plugins/credential_intelligence/cracking/ (params & hashes)
+    API->>API: Validate parameters (RBAC: IsPenetrationTester)
+    API->>SDK: docker.from_env()
+    API->>SDK: Check GPU capabilities
+    API->>Host: Run container (with GPU device requests if available)
+    Host->>Container: Spawn hashcat container (bind mount wordlist & hashes)
+    API->>UI: Response (cracking task ID)
+    loop Every 5 seconds
+        UI->>API: GET /api/plugins/credential_intelligence/cracking/{id}/status/
+        API->>SDK: Query container logs/status
+        SDK->>API: Container output
+        API->>UI: Status (live progress, cracked count)
+    end
+    Container->>Host: Crack completed / terminated
+    API->>API: Parse hashcat output file & save plaintexts using EncryptedCharField
+    API->>Host: Remove container
+```
+
 ## Supported Tools
 The plugin provides wrappers and integrations for the following primary tools:
 - **Brutus:** Web authentication bruteforcing (HTTP Basic/Form).
