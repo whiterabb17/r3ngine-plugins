@@ -54,3 +54,11 @@ marketplace:
     description: "Standalone Metasploit integration providing a 2-way interactive terminal and automated Temporal-driven template scans."
     category: "Exploitation"
     signed: true
+
+  - slug: compliance_assessment
+    name: "Compliance Assessment"
+    version: "1.0.0"
+    author: "MistrHyde"
+    description: "Post-scan compliance analysis mapping scan artefacts to PCI-DSS 4.0, HIPAA, NIST SP 800-53, CIS Controls v8, ISO 27001, and SOC 2 controls. Runs automatically after Tier 7."
+    category: "Compliance"
+    signed: false
