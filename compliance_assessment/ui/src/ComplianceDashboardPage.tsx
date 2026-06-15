@@ -22,6 +22,7 @@ const ComplianceDashboardPage: React.FC = () => {
   const [selectedControl, setSelectedControl] = useState<ControlResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [enriching, setEnriching] = useState(false);
+  const isLight = theme.palette.mode === 'light';
 
   useEffect(() => {
     if (!scanId) { setLoading(false); return; }
@@ -76,7 +77,37 @@ const ComplianceDashboardPage: React.FC = () => {
         <Box sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 2, overflow: 'hidden' }}>
           <FrameworkTabs assessments={assessments} selected={selectedAssessmentId} onSelect={setSelectedAssessmentId} />
           {selectedAssessment && (
-            <Box sx={{ p: 3 }}>
+            <Box sx={{
+              p: 3,
+              background: isLight
+                ? theme.palette.background.paper
+                : 'linear-gradient(135deg, rgba(20, 15, 30, 0.7) 0%, rgba(10, 10, 15, 0.9) 100%)',
+              backdropFilter: 'blur(25px) saturate(180%)',
+              border: isLight
+                ? `1px solid ${theme.palette.divider}`
+                : '1px solid rgba(255, 255, 255, 0.06)',
+              borderRadius: isLight ? '8px' : '18px',
+              position: 'relative',
+              boxShadow: isLight
+                ? '0 1px 3px rgba(0, 0, 0, 0.05)'
+                : 'inset 0 0 30px rgba(0, 0, 0, 0.5), 0 15px 35px rgba(0, 0, 0, 0.8)',
+              /* Minimal hover effect to prevent huge tables from getting too hectic */
+              '&:hover': {
+                borderColor: isLight ? theme.palette.primary.main : 'rgba(0, 240, 255, 0.2)',
+              },
+              // ...sx,
+              // /* Dual Gradient Glow - Disabled in light mode */
+              // '&::before': {
+              //   content: '""',
+              //   position: 'absolute',
+              //   inset: 0,
+              //   borderRadius: 'inherit',
+              //   background: 'radial-gradient(circle at 20% 20%, rgba(255, 43, 214, 0.15), transparent 50%), radial-gradient(circle at 80% 80%, rgba(0, 240, 255, 0.1), transparent 50%)',
+              //   opacity: isLight ? 0 : 0.6,
+              //   pointerEvents: 'none',
+              //   zIndex: 0
+              // }
+            }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexWrap: 'wrap', gap: 1 }}>
                 <Box sx={{ display: 'flex', gap: 3 }}>
                   {[
