@@ -2,12 +2,32 @@ framework: pci_dss_4
 version: "4.0"
 name: "PCI DSS 4.0"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Controls are evaluated against scan artefacts gathered in Tiers 0–7.
+# Automated checks use evaluators (vuln / port / header / dns).
+# Controls marked manual: true require human review and are always MANUAL.
+# ─────────────────────────────────────────────────────────────────────────────
+
 controls:
 
-  - id: PCI-2.2.1
-    name: "Configuration standards developed for all system components"
-    section: "Requirement 2 — Apply Secure Configurations to All System Components"
-    remediation: "Remove or disable all default accounts and services not required for business operation. Document approved services and ports for each component."
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Requirement 1 — Install and Maintain Network Security Controls
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: PCI-1.2.1
+    name: "Network security controls restrict inbound and outbound traffic"
+    section: "Requirement 1 — Install and Maintain Network Security Controls"
+    description: >
+      Network security controls (NSCs) such as firewalls must be configured to
+      restrict traffic to only what is necessary for authorised business purposes.
+      This control verifies that no inherently insecure protocols (FTP, Telnet,
+      rsh/rexec) are reachable on the external attack surface, which would indicate
+      overly permissive ingress rules or missing NSC policy.
+    remediation: >
+      Block inbound access to FTP (21), Telnet (23), rsh (514), and rexec (512)
+      at the network perimeter. Replace FTP with SFTP or FTPS; replace Telnet
+      with SSH. Review firewall rule-sets quarterly and remove any 'permit any'
+      rules that do not have a documented business justification.
     checks:
       - evaluator: port
         params: { port_numbers: [21], service_name: ftp }
@@ -17,11 +37,212 @@ controls:
         params: { port_numbers: [23], service_name: telnet }
         result_if_found: FAIL
         confidence: HIGH
+      - evaluator: port
+        params: { port_numbers: [512, 513, 514], service_name: rsh }
+        result_if_found: FAIL
+        confidence: HIGH
+
+  - id: PCI-1.3.1
+    name: "Inbound traffic restricted to only what is necessary"
+    section: "Requirement 1 — Install and Maintain Network Security Controls"
+    description: >
+      Only traffic that is explicitly required for authorised business communication
+      should be permitted to enter the cardholder data environment (CDE). This
+      control checks whether database ports commonly used in payment applications
+      are inadvertently exposed to the internet, which would provide direct access
+      to card data storage without passing through an application tier.
+    remediation: >
+      Database ports (MySQL 3306, PostgreSQL 5432, MSSQL 1433, Oracle 1521,
+      MongoDB 27017, Redis 6379, Elasticsearch 9200) must not be reachable from
+      the public internet. Place database servers in a dedicated network segment
+      accessible only from the application tier. Apply host-based firewall rules
+      as a secondary control.
+    checks:
+      - evaluator: port
+        params: { port_numbers: [3306], service_name: mysql }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: port
+        params: { port_numbers: [5432], service_name: postgresql }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: port
+        params: { port_numbers: [1433], service_name: mssql }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: port
+        params: { port_numbers: [1521], service_name: oracle }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: port
+        params: { port_numbers: [27017], service_name: mongodb }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: port
+        params: { port_numbers: [6379], service_name: redis }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: port
+        params: { port_numbers: [9200, 9300], service_name: elasticsearch }
+        result_if_found: FAIL
+        confidence: HIGH
+
+  - id: PCI-1.3.2
+    name: "All other inbound and outbound traffic denied by default"
+    section: "Requirement 1 — Install and Maintain Network Security Controls"
+    description: >
+      Network security controls must implement an implicit-deny posture — all traffic
+      is blocked unless explicitly permitted. This control checks for exposure of
+      management and infrastructure services on the internet-facing perimeter that
+      should only be reachable from internal management networks.
+    remediation: >
+      Remove or firewall management ports (RDP 3389, VNC 5900-5906, SNMP 161/162,
+      NFS 2049, SMB 445) from internet-facing interfaces. Restrict RDP/SSH access
+      to jump-server or VPN IP ranges only. Enable network-level authentication for
+      RDP where retained.
+    checks:
+      - evaluator: port
+        params: { port_numbers: [3389], service_name: rdp }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: port
+        params: { port_numbers: [5900, 5901, 5902], service_name: vnc }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: port
+        params: { port_numbers: [161, 162], service_name: snmp }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: port
+        params: { port_numbers: [445], service_name: smb }
+        result_if_found: FAIL
+        confidence: HIGH
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Requirement 2 — Apply Secure Configurations to All System Components
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: PCI-2.2.1
+    name: "Configuration standards developed and implemented for all system components"
+    section: "Requirement 2 — Apply Secure Configurations to All System Components"
+    description: >
+      Every system component must be configured according to a documented hardening
+      standard before it enters the cardholder data environment. Configuration
+      standards must address all known security vulnerabilities and be consistent
+      with industry-accepted hardening benchmarks (CIS, DISA STIG, vendor guidance).
+      This control verifies that insecure legacy protocols not required for business
+      operation are not present on in-scope systems.
+    remediation: >
+      Develop and maintain configuration standards based on CIS Benchmarks or DISA
+      STIGs for every system type (OS, database, web server, network device).
+      Remove or disable services, protocols, daemons, and functions not required.
+      Review configurations against the standard before production deployment and
+      at least annually thereafter.
+    checks:
+      - evaluator: port
+        params: { port_numbers: [21], service_name: ftp }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: port
+        params: { port_numbers: [23], service_name: telnet }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: vuln
+        params: { nuclei_tag: misconfig }
+        result_if_found: FAIL
+        confidence: MEDIUM
+
+  - id: PCI-2.2.7
+    name: "All non-console administrative access encrypted using strong cryptography"
+    section: "Requirement 2 — Apply Secure Configurations to All System Components"
+    description: >
+      Administrative interfaces (web-based management consoles, APIs, admin panels)
+      accessible over any network must be encrypted with strong cryptography.
+      Transmitting administrative credentials or commands in cleartext exposes them
+      to network interception and would represent a direct path to compromise of
+      the entire cardholder data environment. This control checks for exposure of
+      unencrypted administrative services.
+    remediation: >
+      Disable or restrict plain HTTP access to all administrative interfaces —
+      enforce HTTPS with TLS 1.2 or higher. Replace any plain-text management
+      protocols with encrypted equivalents (SSH instead of Telnet, SFTP instead of
+      FTP). Apply HSTS to ensure browsers cannot downgrade to HTTP.
+    checks:
+      - evaluator: header
+        params: { header_name: strict-transport-security, must_exist: false }
+        result_if_found: FAIL
+        confidence: MEDIUM
+      - evaluator: vuln
+        params: { nuclei_tag: panel }
+        result_if_found: FAIL
+        confidence: MEDIUM
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Requirement 3 — Protect Stored Account Data
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: PCI-3.3.1
+    name: "SAD (sensitive authentication data) not retained after authorisation"
+    section: "Requirement 3 — Protect Stored Account Data"
+    description: >
+      Sensitive authentication data — full track data from the card magnetic stripe
+      or chip, card verification codes (CVV2/CVC2), and PINs — must never be stored
+      after authorisation is complete, even if encrypted. This is a fundamental PCI
+      requirement that cannot be waived. Remote scanning cannot directly confirm
+      whether SAD is stored, but can detect information disclosure vulnerabilities
+      that might expose stored data.
+    remediation: >
+      Audit application code and database schemas to confirm no SAD is persisted
+      after authorisation. Engage a QSA to validate data flow. Implement data loss
+      prevention (DLP) controls to detect accidental SAD storage or transmission.
+    manual: true
+
+  - id: PCI-3.5.1
+    name: "Primary account number (PAN) secured wherever stored"
+    section: "Requirement 3 — Protect Stored Account Data"
+    description: >
+      Where a PAN must be stored, it must be rendered unreadable using strong
+      one-way hashes, truncation, index tokens, or strong cryptography. This
+      control checks for information disclosure vulnerabilities that could expose
+      account data stored in databases or application logs accessible via the web
+      surface, and for error messages that leak connection strings or file paths
+      pointing to data stores.
+    remediation: >
+      Ensure PANs stored in databases are encrypted at rest using AES-256 or
+      equivalent. Truncate PANs to show only the first six and last four digits
+      in all non-transactional contexts. Verify that application errors do not
+      disclose database connection strings, file system paths, or PAN values.
+    checks:
+      - evaluator: vuln
+        params: { nuclei_tag: exposure }
+        result_if_found: FAIL
+        confidence: MEDIUM
+      - evaluator: vuln
+        params: { nuclei_tag: information-disclosure }
+        result_if_found: FAIL
+        confidence: MEDIUM
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Requirement 4 — Protect Cardholder Data with Strong Cryptography
+  #                 During Transmission Over Open, Public Networks
+  # ═══════════════════════════════════════════════════════════════════════════
 
   - id: PCI-4.2.1
-    name: "Strong cryptography used to safeguard PAN during transmission over open, public networks"
+    name: "Strong cryptography used to safeguard PAN during transmission"
     section: "Requirement 4 — Protect Cardholder Data with Strong Cryptography During Transmission"
-    remediation: "Enable HSTS with min-age 31536000 on all public-facing endpoints. Disable TLS 1.0/1.1. Ensure all HTTP traffic redirects to HTTPS."
+    description: >
+      All cardholder data transmitted over open, public networks must be protected
+      with strong cryptography (TLS 1.2 or higher). Weak or missing encryption
+      allows network adversaries to intercept PANs in transit. This control checks
+      for the presence of HSTS headers (forcing browsers to use HTTPS), whether
+      plain HTTP is served, and whether SSL/TLS vulnerabilities are present that
+      would undermine the strength of the encryption in use.
+    remediation: >
+      Enforce TLS 1.2+ on all public-facing services. Disable TLS 1.0 and TLS 1.1
+      on all servers. Add the Strict-Transport-Security header with a minimum
+      max-age of 31536000 (one year) and include the includeSubDomains directive.
+      Test TLS configuration with testssl.sh or SSLLabs and remediate any A-grade
+      failures before the next compliance assessment.
     checks:
       - evaluator: header
         params: { header_name: strict-transport-security, must_exist: false }
@@ -29,13 +250,85 @@ controls:
         confidence: MEDIUM
       - evaluator: port
         params: { port_numbers: [80], service_name: http }
-        result_if_found: FAIL
+        result_if_found: PARTIAL
         confidence: MEDIUM
+      - evaluator: vuln
+        params: { nuclei_tag: ssl }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: vuln
+        params: { nuclei_tag: tls }
+        result_if_found: FAIL
+        confidence: HIGH
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Requirement 5 — Protect All Systems and Networks from Malicious Software
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: PCI-5.2.1
+    name: "Anti-malware solution deployed on all applicable system components"
+    section: "Requirement 5 — Protect All Systems and Networks from Malicious Software"
+    description: >
+      All system components that are commonly affected by malware must have an
+      anti-malware solution deployed, enabled, and kept current. While remote
+      scanning cannot confirm whether endpoint anti-malware is deployed, it can
+      detect server-side indicators of compromise — webshells, backdoors, and
+      malware-related findings — that would indicate systems are not adequately
+      protected. Detection of such artefacts is a direct compliance failure.
+    remediation: >
+      Deploy an enterprise anti-malware solution (EDR/XDR) on all servers, endpoints,
+      and virtual machines in the CDE. Configure real-time scanning, automatic
+      signature updates, and alert generation. Investigate any webshell or backdoor
+      findings immediately as a potential active compromise. Implement file integrity
+      monitoring on critical system binaries.
+    checks:
+      - evaluator: vuln
+        params: { nuclei_tag: webshell }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: vuln
+        params: { nuclei_tag: backdoor }
+        result_if_found: FAIL
+        confidence: HIGH
+
+  - id: PCI-5.3.4
+    name: "Anti-malware mechanisms and logs active and cannot be disabled"
+    section: "Requirement 5 — Protect All Systems and Networks from Malicious Software"
+    description: >
+      Anti-malware solutions must be actively running and generating audit logs.
+      Users must not be able to disable the solution without documented authorisation
+      from management. This is an operational and configuration requirement that
+      requires manual validation of the anti-malware management console and audit
+      log configurations in the cardholder data environment.
+    remediation: >
+      Configure the anti-malware management platform to alert when any agent goes
+      offline or its protection is disabled. Enable audit log generation for all
+      detection events and ensure logs flow to a centralised SIEM. Implement
+      tamper protection on all anti-malware agents.
+    manual: true
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Requirement 6 — Develop and Maintain Secure Systems and Software
+  # ═══════════════════════════════════════════════════════════════════════════
 
   - id: PCI-6.2.4
-    name: "Software development practices prevent introduction of vulnerabilities in bespoke and custom software"
+    name: "Software development practices prevent introduction of vulnerabilities"
     section: "Requirement 6 — Develop and Maintain Secure Systems and Software"
-    remediation: "Implement a secure SDLC with code review, SAST, and DAST. Ensure web applications are tested for OWASP Top 10 vulnerabilities before deployment."
+    description: >
+      Development processes must actively prevent the introduction of common
+      vulnerability types including those in the OWASP Top 10: SQL injection,
+      cross-site scripting (XSS), local file inclusion (LFI), remote code execution,
+      insecure direct object reference, and security misconfiguration. This control
+      checks whether any of these vulnerability classes are present on the application
+      attack surface discovered during the scan. Their presence indicates that the
+      secure development lifecycle is not effective.
+    remediation: >
+      Integrate SAST (static analysis) and DAST (dynamic analysis) tools into the
+      CI/CD pipeline. Mandate security training for all developers annually and after
+      any major vulnerability event. Conduct peer code review with a security checklist
+      covering OWASP Top 10 for all code changes touching cardholder data flows.
+      Implement parameterised queries, output encoding, and input validation as
+      framework-level controls, not ad-hoc fixes.
     checks:
       - evaluator: vuln
         params: { nuclei_tag: xss }
@@ -49,11 +342,63 @@ controls:
         params: { nuclei_tag: lfi }
         result_if_found: FAIL
         confidence: HIGH
+      - evaluator: vuln
+        params: { nuclei_tag: rce }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: vuln
+        params: { nuclei_tag: xxe }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: vuln
+        params: { nuclei_tag: ssrf }
+        result_if_found: FAIL
+        confidence: HIGH
+
+  - id: PCI-6.3.1
+    name: "Security vulnerabilities identified and assigned a risk ranking"
+    section: "Requirement 6 — Develop and Maintain Secure Systems and Software"
+    description: >
+      All security vulnerabilities identified through scanning, testing, or other
+      means must be documented, risk-ranked (at minimum as critical/high/medium/low),
+      and tracked to resolution. The presence of high or critical severity findings
+      that remain unresolved indicates the vulnerability management process is not
+      functioning. PCI-DSS requires critical vulnerabilities to be remediated within
+      one month and all others on a risk-adjusted timeline.
+    remediation: >
+      Implement a vulnerability management programme with defined SLAs: critical
+      within 7 days, high within 30 days, medium within 90 days. Use a vulnerability
+      tracking system to assign ownership, track status, and generate compliance
+      evidence. Generate a remediation report before each compliance assessment
+      showing all findings and their resolution status.
+    checks:
+      - evaluator: vuln
+        params: { severity: critical }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: vuln
+        params: { severity: high }
+        result_if_found: PARTIAL
+        confidence: MEDIUM
 
   - id: PCI-6.3.3
-    name: "All system components protected from known vulnerabilities by installing applicable security patches/updates"
+    name: "All system components protected from known vulnerabilities"
     section: "Requirement 6 — Develop and Maintain Secure Systems and Software"
-    remediation: "Apply all critical and high severity patches within one month of release. CISA KEV entries must be patched within the shorter of the KEV-specified deadline or 30 days."
+    description: >
+      Security patches and updates must be installed on all system components to
+      protect against known vulnerabilities. This applies to operating systems,
+      application frameworks, libraries, and all third-party components. Critical
+      patches must be installed within one month of release. Components with
+      known critical CVEs present on the attack surface represent a direct and
+      demonstrable compliance failure because they provide an adversary with a
+      documented exploitation path.
+    remediation: >
+      Establish a patch management programme with documented SLAs: critical CVEs
+      within 30 days (or faster if weaponised exploits are publicly available),
+      high within 60 days, others on a risk-adjusted schedule. Subscribe to vendor
+      security advisories and the CISA KEV catalogue. Automate patch deployment
+      where possible using configuration management tooling. Maintain an inventory
+      of all software components and their versions.
     checks:
       - evaluator: vuln
         params: { severity: critical }
@@ -63,17 +408,96 @@ controls:
   - id: PCI-6.4.1
     name: "Public-facing web applications protected against attacks"
     section: "Requirement 6 — Develop and Maintain Secure Systems and Software"
-    remediation: "Deploy a WAF in blocking mode in front of all public-facing web applications, or conduct an application vulnerability assessment at least annually and after any changes."
+    description: >
+      All public-facing web applications must be protected against known attack
+      types either by deploying a web application firewall (WAF) in blocking mode
+      in front of all applications, or by conducting an application vulnerability
+      assessment at least annually and after any significant change. A WAF provides
+      continuous protection against emerging attack patterns, while periodic
+      assessments offer point-in-time assurance. Both controls together provide
+      defence in depth. This check looks for WAF indicators in HTTP response headers.
+    remediation: >
+      Deploy a WAF in blocking mode (not detection-only) in front of all public-facing
+      web applications. Configure the OWASP Core Rule Set (CRS) at paranoia level 2
+      or higher. Review and tune WAF rules monthly. Conduct an application penetration
+      test at minimum annually and after any significant application change. Document
+      the WAF deployment as compensating evidence in the ROC.
     checks:
       - evaluator: vuln
         params: { severity: high }
         result_if_found: FAIL
         confidence: MEDIUM
+      - evaluator: vuln
+        params: { nuclei_tag: waf }
+        result_if_found: PARTIAL
+        confidence: LOW
+
+  - id: PCI-6.4.3
+    name: "All payment page scripts managed and authorised"
+    section: "Requirement 6 — Develop and Maintain Secure Systems and Software"
+    description: >
+      PCI-DSS 4.0 introduced explicit controls for client-side scripts on payment
+      pages. Every JavaScript loaded on a payment page must be authorised, its
+      integrity verified (via Sub-Resource Integrity or equivalent), and its
+      behaviour justified. This control targets e-skimming attacks where malicious
+      JavaScript is injected into payment pages to steal card data at the point of
+      entry. This requires a manual inventory and review of all payment page scripts.
+    remediation: >
+      Maintain an inventory of all scripts loaded on payment pages, including
+      third-party scripts. Implement Sub-Resource Integrity (SRI) hashes for all
+      external scripts. Deploy a Content Security Policy (CSP) that restricts
+      script sources to an allowlist. Regularly scan payment pages for unauthorised
+      script injections using browser-based monitoring or a dedicated skimmer
+      detection service.
+    checks:
+      - evaluator: header
+        params: { header_name: content-security-policy, must_exist: false }
+        result_if_found: FAIL
+        confidence: MEDIUM
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Requirement 7 — Restrict Access to System Components and Cardholder Data
+  #                 by Business Need to Know
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: PCI-7.2.1
+    name: "Access control model defined and implemented restricting access to CDE"
+    section: "Requirement 7 — Restrict Access to System Components and Cardholder Data by Business Need to Know"
+    description: >
+      Access to system components and cardholder data must be limited to only those
+      individuals whose job function requires such access. An access control model
+      must be defined and enforced that grants the minimum necessary access (least
+      privilege principle). This is primarily an administrative and process control
+      that requires review of user access lists, role definitions, and provisioning
+      procedures in the cardholder data environment.
+    remediation: >
+      Define roles and responsibilities for all personnel with access to CDE systems.
+      Implement role-based access control (RBAC) that grants least-privilege access.
+      Review access rights for all users at least every six months and revoke access
+      promptly upon role change or termination. Document the access control model
+      and maintain approval records for all access grants.
+    manual: true
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Requirement 8 — Identify Users and Authenticate Access to System Components
+  # ═══════════════════════════════════════════════════════════════════════════
 
   - id: PCI-8.2.1
-    name: "All user IDs and authentication credentials are managed throughout their life cycle"
+    name: "All users assigned a unique ID before accessing system components"
     section: "Requirement 8 — Identify Users and Authenticate Access to System Components"
-    remediation: "Ensure all exposed authentication endpoints enforce account lockout, strong password policies, and MFA for administrative access."
+    description: >
+      Every individual with access to system components must be assigned a unique
+      user ID so that all actions can be attributed to a specific individual. Shared
+      or generic accounts prevent accountability and make forensic investigation of
+      security incidents impossible. This control checks for exposed default
+      credentials and authentication bypass vulnerabilities that indicate shared or
+      generic accounts are in use on internet-facing services.
+    remediation: >
+      Audit all system components for shared accounts, group accounts, and default
+      credentials. Eliminate all shared accounts except where technically impossible
+      (in which case compensating controls are required). Disable or rename all
+      default vendor accounts before production deployment. Implement privileged
+      access management (PAM) for administrative accounts.
     checks:
       - evaluator: vuln
         params: { nuclei_tag: default-login }
@@ -83,23 +507,195 @@ controls:
         params: { nuclei_tag: auth-bypass }
         result_if_found: FAIL
         confidence: HIGH
+      - evaluator: vuln
+        params: { nuclei_tag: default-credentials }
+        result_if_found: FAIL
+        confidence: HIGH
+
+  - id: PCI-8.3.6
+    name: "Passwords/passphrases for user accounts meet minimum complexity requirements"
+    section: "Requirement 8 — Identify Users and Authenticate Access to System Components"
+    description: >
+      Where passwords are used as an authentication factor, they must meet a minimum
+      length of 12 characters (or 8 characters if the system does not support 12),
+      contain both numeric and alphabetic characters, and must not be the same as
+      any of the last four passwords used. PCI-DSS 4.0 increased the minimum from
+      7 to 12 characters. This requires manual review of password policy configuration
+      in identity providers, Active Directory Group Policy Objects, or application
+      settings.
+    remediation: >
+      Update password policy in all identity providers and applications to require:
+      minimum 12 characters, at least one letter and one number, no reuse of last
+      four passwords, and mandatory change every 90 days (or at first login if
+      temporary credentials are issued). Enforce these policies through technical
+      controls, not just documentation.
+    manual: true
+
+  - id: PCI-8.4.2
+    name: "MFA implemented for all non-console access to the CDE"
+    section: "Requirement 8 — Identify Users and Authenticate Access to System Components"
+    description: >
+      Multi-factor authentication (MFA) must be implemented for all non-console
+      administrative access to the cardholder data environment and for all remote
+      network access originating from outside the entity's network. PCI-DSS 4.0
+      expanded this requirement to cover all non-console CDE access. This is a
+      configuration and policy control that cannot be directly validated through
+      external scanning but is evidenced by reviewing authentication logs and
+      identity provider configuration.
+    remediation: >
+      Enable MFA on all VPN gateways, jump servers, administrative consoles, and
+      identity providers. Require MFA for all privileged accounts. Acceptable MFA
+      factors include authenticator apps (TOTP), hardware security keys (FIDO2),
+      push notification, or biometrics — SMS OTP is not acceptable as a sole second
+      factor due to SIM-swap risk. Document MFA exceptions with compensating controls.
+    manual: true
+
+  - id: PCI-8.6.1
+    name: "System and application accounts managed and protected from misuse"
+    section: "Requirement 8 — Identify Users and Authenticate Access to System Components"
+    description: >
+      System and application accounts — service accounts used by automated processes,
+      batch jobs, and application integrations — must be managed to prevent misuse.
+      Credentials for these accounts must be strong, regularly rotated, and not
+      embedded in source code or configuration files accessible to unauthorised
+      parties. This control checks for exposed API keys, tokens, secrets, and
+      service account credentials in web-accessible locations.
+    remediation: >
+      Rotate all service account credentials and remove hard-coded secrets from
+      source code and web-accessible configuration files. Use a secrets management
+      solution (HashiCorp Vault, AWS Secrets Manager, or equivalent) to store and
+      rotate credentials. Implement repository secret scanning in CI/CD pipelines
+      to prevent secrets from being committed to version control.
+    checks:
+      - evaluator: vuln
+        params: { nuclei_tag: exposure }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: vuln
+        params: { nuclei_tag: token }
+        result_if_found: FAIL
+        confidence: HIGH
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Requirement 9 — Restrict Physical Access to Cardholder Data
+  # ═══════════════════════════════════════════════════════════════════════════
 
   - id: PCI-9.4.1
-    name: "All physical media is protected"
+    name: "All physical media containing cardholder data is secured"
     section: "Requirement 9 — Restrict Physical Access to Cardholder Data"
+    description: >
+      All physical media containing cardholder data — including paper records,
+      backup tapes, hard drives, and portable storage — must be stored in locked,
+      access-controlled locations. A media inventory must be maintained and the
+      location of all media tracked. When media is no longer needed, it must be
+      destroyed using methods that make the data unrecoverable. Physical access
+      controls cannot be assessed through remote scanning and require on-site
+      inspection or attestation.
+    remediation: >
+      Implement locked, access-controlled storage for all physical media. Maintain
+      a media inventory log with location, custodian, and transfer records. Establish
+      and document a media destruction procedure using cross-cut shredding, degaussing,
+      or certified destruction services. Retain destruction certificates for audit.
     manual: true
-    remediation: "Implement physical access controls for all media containing cardholder data. Maintain a media inventory and destruction log."
 
-  - id: PCI-10.1.1
-    name: "Audit logs capture all individual user access to cardholder data"
-    section: "Requirement 10 — Log and Monitor All Access to System Components and Cardholder Data"
+  - id: PCI-9.5.1
+    name: "Point-of-interaction (POI) devices protected from tampering and substitution"
+    section: "Requirement 9 — Restrict Physical Access to Cardholder Data"
+    description: >
+      Payment terminals and POI devices that capture card data must be protected
+      from physical tampering, skimming device installation, and substitution with
+      cloned devices. Personnel must be trained to inspect devices for tampering
+      signs. Device serial numbers must be logged and periodically verified against
+      a trusted inventory. This is an entirely physical control requiring manual
+      inspection of all in-scope payment devices.
+    remediation: >
+      Maintain a list of all POI devices including make, model, location, and serial
+      number. Implement periodic inspection procedures (at minimum annually) to verify
+      device integrity. Train all personnel who interact with POI devices to recognise
+      signs of tampering. Apply tamper-evident seals where possible.
     manual: true
-    remediation: "Configure logging for all system components to capture user activities, failed access attempts, and use of privileged accounts. Retain logs for at least 12 months."
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Requirement 10 — Log and Monitor All Access to System Components
+  #                  and Cardholder Data
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: PCI-10.2.1
+    name: "Audit logs capture all events required by PCI-DSS"
+    section: "Requirement 10 — Log and Monitor All Access to System Components and Cardholder Data"
+    description: >
+      Audit logs must be generated by all in-scope system components and must capture
+      at minimum: all individual user access to cardholder data, all actions by root
+      or administrative users, all access to and changes to audit logs, invalid
+      logical access attempts, use of identification and authentication mechanisms,
+      initialisation and stopping of audit logs, and creation and deletion of system
+      objects. This is an operational and configuration control requiring review of
+      log management system configuration and log samples.
+    remediation: >
+      Configure all system components to generate audit logs covering the full set
+      of required event types. Forward logs to a centralised log management solution
+      (SIEM). Implement log integrity controls to detect modification or deletion.
+      Retain logs for at least 12 months, with at least three months immediately
+      available for analysis.
+    manual: true
+
+  - id: PCI-10.3.3
+    name: "Audit logs protected against destruction and unauthorised modification"
+    section: "Requirement 10 — Log and Monitor All Access to System Components and Cardholder Data"
+    description: >
+      Audit logs must be promptly backed up to a centralised log server or media
+      that is difficult to alter. This prevents an attacker who has compromised a
+      system from covering their tracks by deleting local logs. Logs must be
+      protected from modification by the system being monitored. Write-once media,
+      centralised log aggregation, or cryptographic log signing are all acceptable
+      implementation approaches.
+    remediation: >
+      Configure all systems to forward logs in real-time to a centralised SIEM
+      that is inaccessible to the systems being monitored. Implement file integrity
+      monitoring on local log files. Consider write-once (WORM) log storage for
+      highest-risk systems. Regularly verify log completeness and alert on log
+      pipeline failures or gaps.
+    manual: true
+
+  - id: PCI-10.7.1
+    name: "Failures of critical security controls detected and reported promptly"
+    section: "Requirement 10 — Log and Monitor All Access to System Components and Cardholder Data"
+    description: >
+      PCI-DSS 4.0 added explicit requirements to detect and respond to failures of
+      critical security controls: firewalls, IDS/IPS, FIM, anti-malware, physical
+      access controls, and logical access controls. Failures must be detected and
+      responded to in a timely manner. This is primarily a process and tooling
+      control verified through review of monitoring platform configuration and
+      incident records.
+    remediation: >
+      Implement automated alerting for failures of all critical security controls.
+      Define response SLAs for security control failures — at minimum, critical
+      control failures should be investigated within one hour and remediated within
+      four hours. Document the failure response process and test it at least annually.
+    manual: true
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Requirement 11 — Test Security of Systems and Networks Regularly
+  # ═══════════════════════════════════════════════════════════════════════════
 
   - id: PCI-11.3.1
-    name: "Internal vulnerability scans performed at least once every three months"
+    name: "Internal vulnerability scans performed at least every three months"
     section: "Requirement 11 — Test Security of Systems and Networks Regularly"
-    remediation: "Schedule quarterly internal vulnerability scans. Rescan after any significant infrastructure change. Ensure critical and high findings are resolved before the next scan cycle."
+    description: >
+      Authenticated vulnerability scans of all internal system components must be
+      performed at minimum every quarter and after any significant network change.
+      Scans must be conducted by qualified personnel using a tool that provides
+      comprehensive coverage of known vulnerabilities. High-risk and critical
+      vulnerabilities must be resolved and the component rescanned to confirm
+      remediation before the scan is considered passing. The presence of critical
+      findings on internal components indicates the quarterly scan cadence is not
+      achieving effective remediation.
+    remediation: >
+      Schedule quarterly internal vulnerability scans covering all in-scope system
+      components. Use an authenticated scanner to obtain complete visibility into
+      installed software and its vulnerability state. Define and enforce remediation
+      SLAs. Rescan affected components after remediation to confirm resolution before
+      the next scheduled scan cycle. Retain scan reports for at least 12 months.
     checks:
       - evaluator: vuln
         params: { severity: critical }
@@ -107,17 +703,151 @@ controls:
         confidence: HIGH
 
   - id: PCI-11.3.2
-    name: "External vulnerability scans performed at least once every three months by an ASV"
+    name: "External vulnerability scans performed at least every three months by an ASV"
     section: "Requirement 11 — Test Security of Systems and Networks Regularly"
-    remediation: "Engage a PCI SSC-approved scanning vendor (ASV) for quarterly external vulnerability scans. All high-severity findings must be remediated and a clean scan obtained."
+    description: >
+      Quarterly external vulnerability scans must be conducted by a PCI SSC-approved
+      scanning vendor (ASV). All high-severity findings on internet-facing components
+      must be remediated and a passing (clean) scan must be obtained before compliance
+      can be asserted. ASV scans cover all internet-facing IP addresses and domains
+      in scope. The current scan provides external attack surface visibility equivalent
+      to an ASV scan — high-severity findings represent a failed external scan status.
+    remediation: >
+      Engage a PCI SSC-approved scanning vendor (ASV) for quarterly external
+      vulnerability scans. All high-severity findings must be remediated and a
+      dispute/exception filed for any finding that cannot be remediated before
+      the next assessment. Obtain a clean ASV scan report before the QSA review.
+      Retain all scan reports and dispute records for the ROC.
     checks:
       - evaluator: vuln
         params: { severity: high }
         result_if_found: FAIL
         confidence: MEDIUM
 
-  - id: PCI-12.3.4
-    name: "Hardware and software technologies reviewed at least once every 12 months"
-    section: "Requirement 12 — Support Information Security with Organisational Policies and Programmes"
+  - id: PCI-11.4.1
+    name: "Penetration testing methodology defined and implemented"
+    section: "Requirement 11 — Test Security of Systems and Networks Regularly"
+    description: >
+      A penetration testing programme must be in place covering both network-layer
+      and application-layer tests. Tests must be performed at minimum annually and
+      after any significant infrastructure or application upgrade. External and
+      internal penetration tests must be conducted by a qualified internal resource
+      or a qualified external third party. Penetration testing goes beyond vulnerability
+      scanning by actively attempting to exploit weaknesses to validate their real-world
+      impact and to discover logic flaws that automated scanners miss.
+    remediation: >
+      Define a penetration testing methodology that includes: scoping, rules of
+      engagement, testing approach (external and internal, network and application),
+      reporting requirements, and remediation SLAs. Engage a qualified penetration
+      tester (CREST, OSCP, or equivalent) annually. Ensure all critical and high
+      findings from the penetration test are remediated before the next scheduled
+      assessment. Retain test reports and remediation evidence.
     manual: true
-    remediation: "Conduct and document an annual technology review covering all in-scope system components. Identify and plan for EOL systems."
+
+  - id: PCI-11.5.1
+    name: "Change-detection mechanism deployed on critical files"
+    section: "Requirement 11 — Test Security of Systems and Networks Regularly"
+    description: >
+      A file integrity monitoring (FIM) solution must be deployed to alert on
+      unauthorised changes to critical system files, configuration files, and
+      content files. FIM is a key detective control for identifying attacker
+      persistence, software tampering, and web skimmer injection. Alerts must
+      be investigated and responded to within a defined SLA. This is a configuration
+      and operational control requiring manual review of the FIM deployment and
+      alert records.
+    remediation: >
+      Deploy a FIM solution covering: OS critical files, web server content directories,
+      payment application files, configuration files, and log files. Configure alerts
+      for any unauthorised change and define a response SLA of four hours or less for
+      changes to payment-related files. Integrate FIM alerts into the SIEM and include
+      them in the incident response process.
+    manual: true
+
+  - id: PCI-11.6.1
+    name: "Change and tamper-detection for payment pages"
+    section: "Requirement 11 — Test Security of Systems and Networks Regularly"
+    description: >
+      PCI-DSS 4.0 introduced a specific requirement to detect unauthorised changes
+      to payment pages (HTTP headers and page content) in real time or at least
+      weekly. This targets e-skimming attacks where malicious JavaScript is injected
+      into checkout pages to steal card data. A Content Security Policy (CSP) header
+      is a technical control that limits which scripts can execute on a payment page
+      and is a key indicator of maturity in payment page protection. The absence of
+      CSP on the application's web surface suggests this control may not be implemented.
+    remediation: >
+      Implement a Content Security Policy (CSP) header on all payment pages that
+      restricts script execution to an allowlist of authorised sources. Deploy a
+      dedicated payment page change-detection mechanism that alerts within 24 hours
+      of any modification to payment page scripts, iframes, or HTTP headers.
+      Consider deploying a client-side script monitoring solution specifically
+      designed for e-skimming detection.
+    checks:
+      - evaluator: header
+        params: { header_name: content-security-policy, must_exist: false }
+        result_if_found: FAIL
+        confidence: MEDIUM
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Requirement 12 — Support Information Security with Organizational Policies
+  #                  and Programs
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: PCI-12.3.4
+    name: "Hardware and software technologies reviewed at least every 12 months"
+    section: "Requirement 12 — Support Information Security with Organisational Policies and Programmes"
+    description: >
+      All hardware and software technologies in use within the cardholder data
+      environment must be reviewed at least annually to confirm they continue to
+      receive security fixes and support from the vendor. End-of-life (EOL)
+      components that no longer receive security patches represent an unacceptable
+      risk as vulnerabilities will not be remediated. This review must document
+      the current state of all in-scope technologies and plan for migration away
+      from any approaching EOL status.
+    remediation: >
+      Conduct an annual technology review covering all hardware and software in the
+      CDE. Identify any components that are EOL or approaching EOL within the next
+      12 months. Develop migration plans for EOL components. Document the review
+      results and maintain an up-to-date asset inventory with vendor support status
+      for each component.
+    manual: true
+
+  - id: PCI-12.6.1
+    name: "Security awareness programme implemented for all personnel"
+    section: "Requirement 12 — Support Information Security with Organisational Policies and Programmes"
+    description: >
+      A formal information security awareness programme must be in place for all
+      personnel. Training must be conducted at hire and at least annually thereafter.
+      The programme must cover the importance of information security, the entity's
+      policies and procedures, the consequences of violating security policies, and
+      recognition of and response to social engineering and phishing attacks. PCI-DSS
+      4.0 places particular emphasis on training personnel to recognise phishing,
+      vishing, and smishing attempts as these are primary initial attack vectors.
+    remediation: >
+      Develop or procure a security awareness training programme covering: PCI-DSS
+      obligations, data handling requirements, phishing and social engineering
+      recognition, incident reporting procedures, and acceptable use policy.
+      Deliver training at hire and annually. Conduct phishing simulation exercises
+      at least quarterly. Maintain training completion records and track remedial
+      training for personnel who fail simulations.
+    manual: true
+
+  - id: PCI-12.10.1
+    name: "Incident response plan implemented and ready to be activated"
+    section: "Requirement 12 — Support Information Security with Organisational Policies and Programmes"
+    description: >
+      An incident response plan (IRP) must be in place and ready to be activated
+      immediately upon detection of a system breach. The plan must cover: roles and
+      responsibilities, communication and contact procedures (including notification
+      to payment brands and acquirers), containment and recovery procedures, legal
+      and forensic requirements, and business continuity during an incident. The
+      IRP must be tested at least annually. Given that payment card breaches trigger
+      mandatory notification obligations, an untested or missing IRP represents a
+      significant compliance and business risk.
+    remediation: >
+      Develop a comprehensive incident response plan addressing payment card breach
+      scenarios. Include a communication tree with contacts for your acquiring bank,
+      card brands (Visa, Mastercard), and any relevant regulatory authorities.
+      Define containment procedures that preserve forensic evidence. Test the IRP
+      at least annually through tabletop exercises or simulated incident drills.
+      Retain exercise records and post-exercise improvement plans.
+    manual: true

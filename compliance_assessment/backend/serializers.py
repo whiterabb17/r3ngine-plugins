@@ -14,7 +14,7 @@ class ControlResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = ControlResult
         fields = [
-            'id', 'control_id', 'control_name', 'section',
+            'id', 'control_id', 'control_name', 'description', 'section',
             'result', 'confidence',
             'static_remediation', 'ai_remediation', 'ai_enriched_at',
             'evidence',

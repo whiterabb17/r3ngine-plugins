@@ -79,6 +79,7 @@ class ControlResult(models.Model):
     )
     control_id = models.CharField(max_length=64)
     control_name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
     section = models.CharField(max_length=128)
     result = models.CharField(max_length=16, choices=RESULT_CHOICES)
     confidence = models.CharField(max_length=16, choices=CONFIDENCE_CHOICES)

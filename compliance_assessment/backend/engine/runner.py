@@ -86,10 +86,11 @@ def run_framework(scan_id: int, framework_key: str):
                 control_id=control_id,
                 defaults={
                     'control_name': ctrl.get('name', control_id),
+                    'description': ctrl.get('description', '').strip(),
                     'section': ctrl.get('section', ''),
                     'result': result,
                     'confidence': confidence,
-                    'static_remediation': ctrl.get('remediation', ''),
+                    'static_remediation': ctrl.get('remediation', '').strip(),
                 },
             )
             ComplianceEvidence.objects.filter(control_result=ctrl_obj).delete()

@@ -49,6 +49,7 @@ export interface ControlResult {
   id: number;
   control_id: string;
   control_name: string;
+  description: string;
   section: string;
   result: 'PASS' | 'FAIL' | 'PARTIAL' | 'MANUAL';
   confidence: 'HIGH' | 'MEDIUM' | 'LOW' | 'MANUAL';

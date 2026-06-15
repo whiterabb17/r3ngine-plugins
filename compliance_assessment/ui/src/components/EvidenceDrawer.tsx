@@ -53,6 +53,18 @@ const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({ control, onClose, onAiE
             <Chip label={`${control.confidence} CONFIDENCE`} size="small"
               sx={{ fontFamily: 'Orbitron', fontWeight: 900, fontSize: '0.48rem', height: 18 }} />
           </Box>
+
+          {control.description && (
+            <Box sx={{ mb: 2, p: 1.5, borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.04), borderLeft: `2px solid ${alpha(theme.palette.primary.main, 0.4)}` }}>
+              <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: theme.palette.text.secondary, textTransform: 'uppercase', letterSpacing: 1, mb: 0.75 }}>
+                About this control
+              </Typography>
+              <Typography sx={{ fontSize: '0.72rem', color: theme.palette.text.secondary, lineHeight: 1.6 }}>
+                {control.description}
+              </Typography>
+            </Box>
+          )}
+
           <Divider sx={{ my: 2 }} />
           {control.evidence.length > 0 && (
             <Box sx={{ mb: 2 }}>
