@@ -1,18 +1,7 @@
 from .vuln_evaluator import VulnEvaluator
-from .base import EvaluatorResult
-
-
-class HeaderEvaluator:
-    def check(self, scan_id, params):
-        return EvaluatorResult(matches=False, confidence='MEDIUM', evidence=[])
-
-class PortEvaluator:
-    def check(self, scan_id, params):
-        return EvaluatorResult(matches=False, confidence='MEDIUM', evidence=[])
-
-class DNSEvaluator:
-    def check(self, scan_id, params):
-        return EvaluatorResult(matches=False, confidence='MEDIUM', evidence=[])
+from .header_evaluator import HeaderEvaluator
+from .port_evaluator import PortEvaluator
+from .dns_evaluator import DNSEvaluator
 
 EVALUATOR_MAP = {
     'vuln': VulnEvaluator,
