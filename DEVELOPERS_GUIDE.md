@@ -115,7 +115,7 @@ author: "Your Name"
 license: "GPLv3"
 
 runtime:
-  run_after: "vulnerability_scan"   # or "run before: <step>"
+  run_after: "tier_7"               # or "run_before: <tier>"
                                     # REQUIRED — must declare one or the other
 
 temporal:
@@ -135,16 +135,20 @@ ui:
 - `runtime` must contain either `run after` or `run before` (not both).
 - `temporal.workflows` and `temporal.activities` are optional but must be valid Python import paths relative to `plugins_data.{slug}.` if present.
 
-### Anchor Step Values
+### Tier Anchor Values
 
-The `run after` / `run before` value maps to a named step in the core scan pipeline:
+The `run after` / `run before` value maps to a tier in the core scan pipeline:
 
-| Value | Pipeline Position |
-|-------|------------------|
-| `subdomain_discovery` | After/before Tier 1 subdomain discovery |
-| `http_crawl` | After/before Tier 2 HTTP crawl |
-| `vulnerability_scan` | After/before Tier 6 Nuclei vulnerability scan |
-| `vulnerability_correlation` | After/before Tier 7 correlation & Neo4j sync |
+| Value | Tier | When it fires |
+|-------|------|---------------|
+| `tier_1` | Tier 1 | After subdomain discovery, OSINT, firewall/VPN detection |
+| `tier_2` | Tier 2 | After port scan and HTTP crawl |
+| `tier_3` | Tier 3 | After URL fetching and screenshotting |
+| `tier_4` | Tier 4 | After directory/file fuzzing and parameter discovery |
+| `tier_5` | Tier 5 | After web API discovery, WAF detection, and secret scanning |
+| `tier_6` | Tier 6 | After vulnerability scanning (Nuclei, vigolium, WAF bypass) |
+| `tier_7` | Tier 7 | After vulnerability correlation, CVE enrichment, risk scoring, and APME — **all scan data is available** |
+| `standalone` | — | Not injected into the pipeline; triggered manually from the UI |
 
 ![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/aqua.png)
 
@@ -370,18 +374,29 @@ All non-deterministic work — DB writes, tool execution, external HTTP — goes
 
 ![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/aqua.png)
 
-## Pipeline Injection
+## Pipeline Injection — Tier Anchor Keys
 
-Plugins declared with `run after: <step>` or `run before: <step>` are automatically injected into the core scan pipeline by `PluginOrchestrator.inject_tasks()`.
+Plugins inject into the scan pipeline via the `run after` key in `manifest.yaml`. The value must be one of the standardised tier keys:
+
+| Key | Tier | When it fires |
+|---|---|---|
+| `tier_1` | Tier 1 | After subdomain discovery, OSINT, firewall/VPN detection |
+| `tier_2` | Tier 2 | After port scan and HTTP crawl |
+| `tier_3` | Tier 3 | After URL fetching and screenshotting |
+| `tier_4` | Tier 4 | After directory/file fuzzing and parameter discovery |
+| `tier_5` | Tier 5 | After web API discovery, WAF detection, and secret scanning |
+| `tier_6` | Tier 6 | After vulnerability scanning (Nuclei, vigolium, WAF bypass) |
+| `tier_7` | Tier 7 | After vulnerability correlation, CVE enrichment, risk scoring, and APME — **all scan data is available** |
+| `standalone` | — | Not injected into the pipeline; triggered manually from the UI |
 
 ### How inject_tasks Works
 
-When the scan pipeline reaches the named anchor step, the orchestrator queries all enabled plugins whose `anchor_step` matches, ordered by `order_weight`. It loads `{slug}_tasks.py` from the plugin root directory and calls the task function.
+When the scan pipeline reaches the named anchor tier, the orchestrator queries all enabled plugins whose `anchor_step` matches, ordered by `order_weight`. It loads `{slug}_tasks.py` from the plugin root directory and calls the task function.
 
 ```python
 # Simplified from web/plugins/orchestrator.py
 plugins = Plugin.objects.filter(
-    anchor_step="vulnerability_scan",
+    anchor_step="tier_7",
     runtime_position="AFTER",
     is_enabled=True,
 ).order_by("order_weight")
@@ -391,6 +406,8 @@ for plugin in plugins:
     fn = getattr(module, "run", None) or getattr(module, plugin.slug)
     fn(ctx)
 ```
+
+The PipelineBuilder UI in the Plugins page allows users to drag plugins between tiers. The `run after` value in `manifest.yaml` is the **default position** — users can reassign without modifying the plugin.
 
 ### Writing a Plugin Task Function
 
@@ -683,6 +700,40 @@ npm run build
 # Produces: dist/assets/remoteEntry.js
 #           dist/assets/__federation_expose_Mount-*.js
 #           dist/assets/index-*.js
+```
+
+![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/aqua.png)
+
+## Plugin Card Slots
+
+Plugins can surface compact summary cards inside three core r3ngine pages without modifying any host component:
+
+| Slot | Page | Context |
+|---|---|---|
+| `ScanCard` | Scan Detail page | `{ scanId: number }` |
+| `TargetCard` | Target Summary page | `{ targetId: number }` |
+| `DashboardCard` | Main Dashboard | _(no props)_ |
+
+### Current status
+
+Card slot registration is available via `registerPluginCards` in the host's `pluginCardRegistry` module, exposed at `host/pluginCardRegistry`. However, because plugin UIs must use `shared: []` (see Vite configuration rules), React component types **cannot be passed across the federation boundary** — each side has its own React instance.
+
+The recommended approach for card-like UI is to build it as part of your full dashboard page (`ComplianceDashboardPage` pattern) or as an iframe-mounted widget. Direct component registration via `registerPluginCards` requires a future architecture change where the host exposes a shared React scope.
+
+### Example — how card registration would work (future)
+
+```tsx
+// ui/src/mount.tsx (future pattern — requires host to expose shared React)
+try {
+  const { registerPluginCards } = await import('host/pluginCardRegistry');
+  registerPluginCards({
+    slug: 'my_plugin',
+    // ScanCard: MyScanCard,     // requires shared React — not yet supported
+    // TargetCard: MyTargetCard, // requires shared React — not yet supported
+  });
+} catch (e) {
+  console.warn('[my_plugin] Could not register plugin cards:', e);
+}
 ```
 
 ![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/aqua.png)

@@ -29,6 +29,10 @@
   <img src="docs/dashboard.png" height="550px" width="1020px" alt=""/>
 </p>
 
+<p align="center">
+  <img src="docs/metasploit_console.gif" height="550px" width="1020px" alt="Metasploit Console Demo"/>
+</p>
+
 ![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/aqua.png)
 
 ## About

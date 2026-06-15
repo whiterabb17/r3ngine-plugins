@@ -1,0 +1,1 @@
+default_app_config = 'plugins_data.compliance_assessment.backend.apps.ComplianceAssessmentBackendConfig'
