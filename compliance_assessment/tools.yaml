@@ -1,0 +1,5 @@
+tools:
+  - name: weasyprint
+    description: "HTML to PDF conversion library"
+    check_command: "python3 -c 'import weasyprint; print(weasyprint.__version__)'"
+    install_command: "pip3 install weasyprint"
