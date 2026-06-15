@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
-import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
+import { ThemeProvider, createTheme } from '@mui/material';
 import ComplianceDashboardPage from './ComplianceDashboardPage';
 
 const darkTheme = createTheme({
@@ -9,8 +9,9 @@ const darkTheme = createTheme({
     mode: 'dark',
     primary: { main: '#00f3ff' },
     background: {
-      default: '#07070c',
-      paper: 'rgba(13, 13, 26, 0.7)',
+      // transparent default so the host app's background shows through
+      default: 'transparent',
+      paper: 'rgba(13, 13, 26, 0.85)',
     },
   },
   components: {
@@ -33,7 +34,6 @@ export function mount(el: HTMLElement, _props: Record<string, unknown>): void {
   root.render(
     <React.StrictMode>
       <ThemeProvider theme={darkTheme}>
-        <CssBaseline />
         <ComplianceDashboardPage />
       </ThemeProvider>
     </React.StrictMode>

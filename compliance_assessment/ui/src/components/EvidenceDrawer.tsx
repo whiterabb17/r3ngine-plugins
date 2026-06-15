@@ -18,17 +18,31 @@ const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({ control, onClose, onAiE
     PARTIAL: theme.palette.warning.main, MANUAL: theme.palette.secondary.main,
   }[r] ?? theme.palette.text.secondary);
 
+  // The host AppBar is position:fixed with mt:1.5 (12px) + minHeight 64px = 76px total
+  const APPBAR_HEIGHT = 76;
+
   return (
     <Drawer anchor="right" open={control !== null} onClose={onClose}
-      PaperProps={{ sx: { width: { xs: '100%', sm: 480 }, p: 3, bgcolor: theme.palette.background.paper } }}>
+      PaperProps={{
+        sx: {
+          width: { xs: '100%', sm: 480 },
+          p: 3,
+          bgcolor: theme.palette.background.paper,
+          top: `${APPBAR_HEIGHT}px`,
+          height: `calc(100% - ${APPBAR_HEIGHT}px)`,
+        },
+      }}>
       {control && (
         <Box>
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
-            <Box>
-              <Typography sx={{ fontFamily: 'Orbitron', fontWeight: 900, fontSize: '0.75rem', color: theme.palette.primary.main }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
+            <Box sx={{ flex: 1, mr: 1 }}>
+              <Typography sx={{ fontFamily: 'Orbitron', fontWeight: 900, fontSize: '0.65rem', color: theme.palette.primary.main, letterSpacing: 1 }}>
                 {control.control_id}
               </Typography>
-              <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, mt: 0.5 }}>{control.control_name}</Typography>
+              <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, mt: 0.5, lineHeight: 1.3 }}>{control.control_name}</Typography>
+              <Typography sx={{ fontSize: '0.65rem', color: theme.palette.text.secondary, mt: 0.5, fontStyle: 'italic' }}>
+                {control.section}
+              </Typography>
             </Box>
             <IconButton size="small" onClick={onClose}><X size={16} /></IconButton>
           </Box>
