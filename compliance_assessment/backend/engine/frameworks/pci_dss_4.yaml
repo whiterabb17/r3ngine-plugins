@@ -1,0 +1,123 @@
+framework: pci_dss_4
+version: "4.0"
+name: "PCI DSS 4.0"
+
+controls:
+
+  - id: PCI-2.2.1
+    name: "Configuration standards developed for all system components"
+    section: "Requirement 2 — Apply Secure Configurations to All System Components"
+    remediation: "Remove or disable all default accounts and services not required for business operation. Document approved services and ports for each component."
+    checks:
+      - evaluator: port
+        params: { port_numbers: [21], service_name: ftp }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: port
+        params: { port_numbers: [23], service_name: telnet }
+        result_if_found: FAIL
+        confidence: HIGH
+
+  - id: PCI-4.2.1
+    name: "Strong cryptography used to safeguard PAN during transmission over open, public networks"
+    section: "Requirement 4 — Protect Cardholder Data with Strong Cryptography During Transmission"
+    remediation: "Enable HSTS with min-age 31536000 on all public-facing endpoints. Disable TLS 1.0/1.1. Ensure all HTTP traffic redirects to HTTPS."
+    checks:
+      - evaluator: header
+        params: { header_name: strict-transport-security, must_exist: false }
+        result_if_found: FAIL
+        confidence: MEDIUM
+      - evaluator: port
+        params: { port_numbers: [80], service_name: http }
+        result_if_found: FAIL
+        confidence: MEDIUM
+
+  - id: PCI-6.2.4
+    name: "Software development practices prevent introduction of vulnerabilities in bespoke and custom software"
+    section: "Requirement 6 — Develop and Maintain Secure Systems and Software"
+    remediation: "Implement a secure SDLC with code review, SAST, and DAST. Ensure web applications are tested for OWASP Top 10 vulnerabilities before deployment."
+    checks:
+      - evaluator: vuln
+        params: { nuclei_tag: xss }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: vuln
+        params: { nuclei_tag: sqli }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: vuln
+        params: { nuclei_tag: lfi }
+        result_if_found: FAIL
+        confidence: HIGH
+
+  - id: PCI-6.3.3
+    name: "All system components protected from known vulnerabilities by installing applicable security patches/updates"
+    section: "Requirement 6 — Develop and Maintain Secure Systems and Software"
+    remediation: "Apply all critical and high severity patches within one month of release. CISA KEV entries must be patched within the shorter of the KEV-specified deadline or 30 days."
+    checks:
+      - evaluator: vuln
+        params: { severity: critical }
+        result_if_found: FAIL
+        confidence: HIGH
+
+  - id: PCI-6.4.1
+    name: "Public-facing web applications protected against attacks"
+    section: "Requirement 6 — Develop and Maintain Secure Systems and Software"
+    remediation: "Deploy a WAF in blocking mode in front of all public-facing web applications, or conduct an application vulnerability assessment at least annually and after any changes."
+    checks:
+      - evaluator: vuln
+        params: { severity: high }
+        result_if_found: FAIL
+        confidence: MEDIUM
+
+  - id: PCI-8.2.1
+    name: "All user IDs and authentication credentials are managed throughout their life cycle"
+    section: "Requirement 8 — Identify Users and Authenticate Access to System Components"
+    remediation: "Ensure all exposed authentication endpoints enforce account lockout, strong password policies, and MFA for administrative access."
+    checks:
+      - evaluator: vuln
+        params: { nuclei_tag: default-login }
+        result_if_found: FAIL
+        confidence: HIGH
+      - evaluator: vuln
+        params: { nuclei_tag: auth-bypass }
+        result_if_found: FAIL
+        confidence: HIGH
+
+  - id: PCI-9.4.1
+    name: "All physical media is protected"
+    section: "Requirement 9 — Restrict Physical Access to Cardholder Data"
+    manual: true
+    remediation: "Implement physical access controls for all media containing cardholder data. Maintain a media inventory and destruction log."
+
+  - id: PCI-10.1.1
+    name: "Audit logs capture all individual user access to cardholder data"
+    section: "Requirement 10 — Log and Monitor All Access to System Components and Cardholder Data"
+    manual: true
+    remediation: "Configure logging for all system components to capture user activities, failed access attempts, and use of privileged accounts. Retain logs for at least 12 months."
+
+  - id: PCI-11.3.1
+    name: "Internal vulnerability scans performed at least once every three months"
+    section: "Requirement 11 — Test Security of Systems and Networks Regularly"
+    remediation: "Schedule quarterly internal vulnerability scans. Rescan after any significant infrastructure change. Ensure critical and high findings are resolved before the next scan cycle."
+    checks:
+      - evaluator: vuln
+        params: { severity: critical }
+        result_if_found: FAIL
+        confidence: HIGH
+
+  - id: PCI-11.3.2
+    name: "External vulnerability scans performed at least once every three months by an ASV"
+    section: "Requirement 11 — Test Security of Systems and Networks Regularly"
+    remediation: "Engage a PCI SSC-approved scanning vendor (ASV) for quarterly external vulnerability scans. All high-severity findings must be remediated and a clean scan obtained."
+    checks:
+      - evaluator: vuln
+        params: { severity: high }
+        result_if_found: FAIL
+        confidence: MEDIUM
+
+  - id: PCI-12.3.4
+    name: "Hardware and software technologies reviewed at least once every 12 months"
+    section: "Requirement 12 — Support Information Security with Organisational Policies and Programmes"
+    manual: true
+    remediation: "Conduct and document an annual technology review covering all in-scope system components. Identify and plan for EOL systems."
