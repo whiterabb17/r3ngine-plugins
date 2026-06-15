@@ -8,7 +8,13 @@
   <img src="https://img.shields.io/badge/version-v1.2.0-informational?&logo=none" alt="r3ngine Latest Version" />
 </p>
 
-reNgine v3 introduces a modular plugin architecture that lets developers extend the platform's capabilities without modifying the core codebase. Plugins can add backend pipelines, Temporal workflows, and full UI pages.
+reNgine v3 introduces a modular plugin architecture that lets developers extend the platform's capabilities without modifying the core codebase. Plugins can:
+
+- Add new Django models and REST API endpoints
+- Register Temporal workflows and activities for scan pipeline integration
+- **Inject tasks into the scan pipeline at any tier** (`tier_1` through `tier_7`, or `standalone`)
+- Serve a React UI via Vite Module Federation (loaded dynamically by `PluginPageLoader`)
+- Install external security tools at container startup via `tools.yaml`
 
 ---
 
