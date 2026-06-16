@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#0a1a14"/>
+    </linearGradient>
+    <linearGradient id="shieldFill" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00302a"/>
+      <stop offset="100%" stop-color="#001a14"/>
+    </linearGradient>
+    <linearGradient id="docFill" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#002b22"/>
+      <stop offset="100%" stop-color="#001810"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <!-- Subtle background glow -->
+  <circle cx="512" cy="490" r="360" fill="#003428" opacity="0.25"/>
+
+  <!-- Shield body -->
+  <path d="M512,148 L748,242 L748,516 Q748,700 512,848 Q276,700 276,516 L276,242 Z"
+        fill="url(#shieldFill)" stroke="#00d4b8" stroke-width="14" stroke-linejoin="round"/>
+
+  <!-- Shield inner edge highlight -->
+  <path d="M512,192 L710,272 L710,508 Q710,665 512,800 Q314,665 314,508 L314,272 Z"
+        fill="none" stroke="#00e5cc" stroke-width="3" opacity="0.2" stroke-linejoin="round"/>
+
+  <!-- Document body -->
+  <rect x="400" y="262" width="224" height="298" rx="12" fill="url(#docFill)" stroke="#00c4b0" stroke-width="7"/>
+
+  <!-- Document clip bar at top -->
+  <rect x="460" y="248" width="104" height="30" rx="10" fill="#00c4b0"/>
+  <rect x="484" y="256" width="56" height="14" rx="5" fill="#00897b"/>
+
+  <!-- Control row 1: PASS -->
+  <rect x="424" y="300" width="176" height="26" rx="5" fill="#001c16" opacity="0.9"/>
+  <path d="M436,313 L445,323 L462,302" stroke="#00e5cc" stroke-width="5.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="472" y="311" width="110" height="7" rx="3.5" fill="#005c4e"/>
+
+  <!-- Control row 2: PASS -->
+  <rect x="424" y="338" width="176" height="26" rx="5" fill="#001c16" opacity="0.9"/>
+  <path d="M436,351 L445,361 L462,340" stroke="#00e5cc" stroke-width="5.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="472" y="349" width="86" height="7" rx="3.5" fill="#005c4e"/>
+
+  <!-- Control row 3: FAIL -->
+  <rect x="424" y="376" width="176" height="26" rx="5" fill="#1c0008" opacity="0.9"/>
+  <path d="M436,382 L451,397 M451,382 L436,397" stroke="#ff3355" stroke-width="5.5" stroke-linecap="round"/>
+  <rect x="472" y="387" width="110" height="7" rx="3.5" fill="#500015"/>
+
+  <!-- Control row 4: PASS -->
+  <rect x="424" y="414" width="176" height="26" rx="5" fill="#001c16" opacity="0.9"/>
+  <path d="M436,427 L445,437 L462,416" stroke="#00e5cc" stroke-width="5.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="472" y="425" width="100" height="7" rx="3.5" fill="#005c4e"/>
+
+  <!-- Control row 5: PARTIAL -->
+  <rect x="424" y="452" width="176" height="26" rx="5" fill="#1a1100" opacity="0.9"/>
+  <line x1="436" y1="465" x2="452" y2="465" stroke="#ffaa00" stroke-width="5.5" stroke-linecap="round"/>
+  <rect x="472" y="463" width="94" height="7" rx="3.5" fill="#4a3200"/>
+
+  <!-- Control row 6: PASS -->
+  <rect x="424" y="490" width="176" height="26" rx="5" fill="#001c16" opacity="0.9"/>
+  <path d="M436,503 L445,513 L462,492" stroke="#00e5cc" stroke-width="5.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="472" y="501" width="78" height="7" rx="3.5" fill="#005c4e"/>
+
+  <!-- Document bottom fade line -->
+  <rect x="424" y="528" width="176" height="12" rx="6" fill="#005c4e" opacity="0.25"/>
+
+  <!-- Large bold checkmark sweeping across lower shield -->
+  <path d="M362,598 L454,706 L674,470"
+        stroke="#00e5cc" stroke-width="36" fill="none"
+        stroke-linecap="round" stroke-linejoin="round"
+        filter="url(#glow)" opacity="0.97"/>
+
+  <!-- Checkmark inner highlight -->
+  <path d="M362,598 L454,706 L674,470"
+        stroke="#80ffee" stroke-width="10" fill="none"
+        stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/>
+
+  <!-- Decorative circuit nodes at shield anchor points -->
+  <circle cx="276" cy="242" r="13" fill="#00e5cc" opacity="0.75" filter="url(#glow)"/>
+  <circle cx="748" cy="242" r="13" fill="#00e5cc" opacity="0.75" filter="url(#glow)"/>
+  <circle cx="276" cy="516" r="9"  fill="#00e5cc" opacity="0.45"/>
+  <circle cx="748" cy="516" r="9"  fill="#00e5cc" opacity="0.45"/>
+
+  <!-- Left circuit lines -->
+  <line x1="148" y1="242" x2="276" y2="242" stroke="#00e5cc" stroke-width="3" opacity="0.35"/>
+  <line x1="148" y1="242" x2="148" y2="516" stroke="#00e5cc" stroke-width="2" opacity="0.18"/>
+  <line x1="148" y1="516" x2="276" y2="516" stroke="#00e5cc" stroke-width="2" opacity="0.18"/>
+  <circle cx="148" cy="242" r="5" fill="#00e5cc" opacity="0.35"/>
+  <circle cx="148" cy="516" r="4" fill="#00e5cc" opacity="0.18"/>
+
+  <!-- Right circuit lines -->
+  <line x1="748" y1="242" x2="876" y2="242" stroke="#00e5cc" stroke-width="3" opacity="0.35"/>
+  <line x1="876" y1="242" x2="876" y2="516" stroke="#00e5cc" stroke-width="2" opacity="0.18"/>
+  <line x1="876" y1="516" x2="748" y2="516" stroke="#00e5cc" stroke-width="2" opacity="0.18"/>
+  <circle cx="876" cy="242" r="5" fill="#00e5cc" opacity="0.35"/>
+  <circle cx="876" cy="516" r="4" fill="#00e5cc" opacity="0.18"/>
+
+  <!-- Small accent dots on shield outline -->
+  <circle cx="512" cy="148" r="8"  fill="#00e5cc" opacity="0.6"/>
+  <circle cx="512" cy="848" r="8"  fill="#00e5cc" opacity="0.5"/>
+</svg>
