@@ -5,7 +5,7 @@
 # reNgine v3 Plugin Development Guide
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.2.0-informational?&logo=none" alt="r3ngine Latest Version" />
+  <img src="https://img.shields.io/badge/version-v1.5.0-informational?&logo=none" alt="r3ngine Latest Version" />
 </p>
 
 reNgine v3 introduces a modular plugin architecture that lets developers extend the platform's capabilities without modifying the core codebase. Plugins can:
