@@ -3,6 +3,7 @@ import os
 import subprocess
 import shlex
 from reNgine.utils.opsec import OpSecManager, ProxychainsWrapper
+from reNgine.utils.task import run_command
 
 class CredentialOpSecManager:
     """
@@ -49,11 +50,11 @@ class CredentialOpSecManager:
         
         # 3. Execute process
         try:
-            result = subprocess.run(stealth_cmd, capture_output=True, text=True, timeout=3600)
+            returncode, output = run_command(stealth_cmd, timeout=3600)
             return {
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-                "returncode": result.returncode
+                "stdout": output,
+                "stderr": "",
+                "returncode": returncode
             }
         except Exception as e:
             self.logger.error(f"Execution failed for {tool_name}: {str(e)}")

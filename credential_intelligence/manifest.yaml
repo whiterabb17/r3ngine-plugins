@@ -1,6 +1,6 @@
 name: "Credential Intelligence"
 slug: "credential_intelligence"
-version: "1.4.0"
+version: "1.4.1"
 description: "Advanced authentication testing and password auditing via brutus, netexec, kerbrute, and hashcat."
 author: "MistrHyde"
 icon: "icon.png"
