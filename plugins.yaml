@@ -39,13 +39,13 @@ marketplace:
     category: "Intelligence"
     signed: true
 
-  - slug: email_security
-    name: "Email Security"
-    version: "1.1.2"
-    author: "MistrHyde"
-    description: "SMTP open relay, user enumeration, STARTTLS, and SPF/DKIM/DMARC policy checks."
-    category: "Security"
-    signed: true
+  # - slug: email_security
+  #   name: "Email Security"
+  #   version: "1.1.2"
+  #   author: "MistrHyde"
+  #   description: "SMTP open relay, user enumeration, STARTTLS, and SPF/DKIM/DMARC policy checks."
+  #   category: "Security"
+  #   signed: true
 
   - slug: metasploit_integration
     name: "Metasploit Integration"
