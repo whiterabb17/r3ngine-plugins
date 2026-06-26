@@ -279,12 +279,12 @@ class MetasploitTaskViewSet(viewsets.ModelViewSet):
 
         # Trigger Temporal workflow
         try:
-            from reNgine.tasks import TemporalClient
+            from reNgine.temporal_client import TemporalClientProvider
             import asyncio
 
             async def trigger_workflow():
                 """Start the MetasploitTaskWorkflow for the given task."""
-                client = await TemporalClient.get_client()
+                client = await TemporalClientProvider.get_client()
                 await client.start_workflow(
                     "MetasploitTaskWorkflow",
                     task.id,
