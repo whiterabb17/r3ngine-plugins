@@ -1,6 +1,6 @@
 name: "Active Directory"
 description: "Enterprise AD assessment, identity intelligence, and exposure management plugin for contracted penetration testing and consulting engagements."
-version: "1.1.0"
+version: "1.1.1"
 author: "MistrHyde"
 icon: "icon.png"
 

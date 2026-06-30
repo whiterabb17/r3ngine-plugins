@@ -383,13 +383,13 @@ class BurpManualSyncView(APIView):
 
         try:
             # Import and start the Temporal workflow
-            from reNgine.temporal_client import get_temporal_client_sync
+            from reNgine.temporal_client import TemporalClientProvider
             import asyncio
             from .temporal_exports import BurpSuiteWorkflow
 
             async def _start():
                 """Async helper to start the Burp Suite Temporal workflow."""
-                client = await get_temporal_client_sync()
+                client = await TemporalClientProvider.get_client()
                 handle = await client.start_workflow(
                     BurpSuiteWorkflow.run,
                     {"sync_log_id": sync_log.id, "scan_history_id": scan_history_id},
@@ -452,13 +452,13 @@ class BurpManualPushView(APIView):
         )
 
         try:
-            from reNgine.temporal_client import get_temporal_client_sync
+            from reNgine.temporal_client import TemporalClientProvider
             import asyncio
             from .temporal_exports import BurpPushWorkflow
 
             async def _start():
                 """Async helper to start the Burp Suite push Temporal workflow."""
-                client = await get_temporal_client_sync()
+                client = await TemporalClientProvider.get_client()
                 handle = await client.start_workflow(
                     BurpPushWorkflow.run,
                     {"sync_log_id": sync_log.id, "scan_history_id": scan_history_id},

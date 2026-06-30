@@ -5,6 +5,7 @@ import logging
 import os
 from datetime import timedelta
 from typing import Optional
+from reNgine.utils.task import run_command
 
 from temporalio import activity, workflow
 from temporalio.common import RetryPolicy
@@ -549,12 +550,12 @@ def run_active_ldap_scan_activity(params: dict) -> dict:
         cmd_str = ' '.join(cmd)
         activity.logger.info(f"[RunActiveLdapScanActivity] Executing: {cmd_str}")
 
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        return_code, output = run_command(cmd, timeout=600)
 
-        if result.returncode != 0:
-            activity.logger.error(f"[RunActiveLdapScanActivity] ldapdomaindump failed: {result.stderr}")
+        if return_code != 0:
+            activity.logger.error(f"[RunActiveLdapScanActivity] ldapdomaindump failed: {output}")
             shutil.rmtree(out_dir, ignore_errors=True)
-            return {'status': 'failed', 'error': result.stderr}
+            return {'status': 'failed', 'error': output}
 
         activity.logger.info(f"[RunActiveLdapScanActivity] ldapdomaindump completed successfully. Starting ingestion.")
 
@@ -622,18 +623,18 @@ def run_active_certipy_scan_activity(params: dict) -> dict:
         cmd_str = ' '.join(cmd)
         activity.logger.info(f"[RunActiveCertipyScanActivity] Executing: {cmd_str}")
 
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        return_code, output = run_command(cmd, timeout=600)
 
-        if result.returncode != 0:
-            activity.logger.error(f"[RunActiveCertipyScanActivity] certipy failed: {result.stderr}")
+        if return_code != 0:
+            activity.logger.error(f"[RunActiveCertipyScanActivity] certipy failed: {output}")
             shutil.rmtree(out_dir, ignore_errors=True)
-            return {'status': 'failed', 'error': result.stderr}
+            return {'status': 'failed', 'error': output}
 
         activity.logger.info(f"[RunActiveCertipyScanActivity] certipy completed successfully. Starting parsing.")
 
         templates_count = 0
         try:
-            raw_data = json.loads(result.stdout)
+            raw_data = json.loads(output)
             templates = raw_data.get('Certificate Templates', {})
 
             from ..graph.manager import ADGraphManager

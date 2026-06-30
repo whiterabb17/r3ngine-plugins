@@ -1,7 +1,7 @@
 marketplace:
   - slug: active_directory
     name: "Active Directory"
-    version: "1.1.0"
+    version: "1.1.1"
     author: "MistrHyde"
     description: "Enterprise AD assessment, identity intelligence, and exposure management plugin for contracted penetration testing and consulting engagements."
     category: "Intelligence"
@@ -9,7 +9,7 @@ marketplace:
 
   - slug: exploit_readiness_layer
     name: "Exploit Readiness Layer"
-    version: "1.2.0"
+    version: "1.2.1"
     author: "MistrHyde"
     description: "Validated vulnerability confirmation using sandboxed tools. Ported to Temporal workflow."
     category: "Exploitation"
@@ -33,19 +33,19 @@ marketplace:
 
   - slug: credential_intelligence
     name: "Credential Intelligence"
-    version: "1.4.0"
+    version: "1.4.1"
     author: "MistrHyde"
     description: "Advanced authentication testing and password auditing via brutus, netexec, kerbrute, and hashcat."
     category: "Intelligence"
     signed: true
 
-  - slug: email_security
-    name: "Email Security"
-    version: "1.1.1"
-    author: "MistrHyde"
-    description: "SMTP open relay, user enumeration, STARTTLS, and SPF/DKIM/DMARC policy checks."
-    category: "Security"
-    signed: true
+  # - slug: email_security
+  #   name: "Email Security"
+  #   version: "1.1.2"
+  #   author: "MistrHyde"
+  #   description: "SMTP open relay, user enumeration, STARTTLS, and SPF/DKIM/DMARC policy checks."
+  #   category: "Security"
+  #   signed: true
 
   - slug: metasploit_integration
     name: "Metasploit Integration"

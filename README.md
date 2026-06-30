@@ -5,7 +5,7 @@
 # reNgine v3 Plugin Development Guide
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.3.0-informational?&logo=none" alt="r3ngine Latest Version" />
+  <img src="https://img.shields.io/badge/version-v1.5.0-informational?&logo=none" alt="r3ngine Latest Version" />
 </p>
 
 reNgine v3 introduces a modular plugin architecture that lets developers extend the platform's capabilities without modifying the core codebase. Plugins can:
@@ -417,14 +417,14 @@ Advanced authentication testing and password auditing via brutus, netexec, kerbr
   <!-- <img src="credential_intelligence/docs/dashboard.png" height="550px" width="1020px" alt="Credential Intelligence Dashboard"/> -->
 </p>
 
-# Email Security Plugin
-SMTP open relay, user enumeration, STARTTLS, and SPF/DKIM/DMARC policy checks. Runs automatically after Tier 2 port scanning.
-<p align="center">
-  <!-- <img src="email_security/docs/dashboard.png" height="550px" width="1020px" alt="Email Security Dashboard"/> -->
-</p>
-
 # Metasploit Integration Plugin
 Standalone Metasploit integration providing a 2-way interactive terminal and automated Temporal-driven template scans.
 <p align="center">
-  <!-- <img src="metasploit_integration/docs/dashboard.png" height="550px" width="1020px" alt="Metasploit Dashboard"/> -->
+  <img src="metasploit_integration/docs/metasploit_console.gif" height="550px" width="1020px" alt="Metasploit Console"/>
 </p>
+
+# Compliance Assessment Plugin
+Post-scan compliance analysis mapping scan artefacts to PCI-DSS 4.0, HIPAA, NIST SP 800-53, CIS Controls v8, ISO 27001, and SOC 2 controls. Runs automatically after Tier 7.
+<!-- <p align="center">
+  <img src="compliance_assessment/docs/dashboard.png" height="550px" width="1020px" alt="Compliance Assessment Dashboard"/>
+</p> -->

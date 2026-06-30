@@ -3,6 +3,7 @@
 import logging
 import os
 import subprocess
+from reNgine.utils.task import run_command
 
 logger = logging.getLogger(__name__)
 
@@ -148,19 +149,14 @@ def swaks_relay_test(host: str, port: int, domain: str, timeout: int = 20) -> di
     ]
     result = {"open_relay": False, "banner": None, "raw": ""}
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout + 5)
-        output = proc.stdout + proc.stderr
+        return_code, output = run_command(cmd, timeout=timeout + 5)
         result["raw"] = output[:2000]
 
         # swaks exits 0 when RCPT is accepted (--quit-after RCPT), meaning relay allowed
-        result["open_relay"] = proc.returncode == 0
+        result["open_relay"] = return_code == 0
         for line in output.splitlines():
             if '<-' in line and '220' in line and result["banner"] is None:
                 result["banner"] = line.split('<-', 1)[-1].strip()[:200]
-    except subprocess.TimeoutExpired:
-        logger.debug(f"[swaks_relay_test] {host}:{port} timed out")
-    except FileNotFoundError:
-        logger.warning("[swaks_relay_test] swaks not found in PATH")
     except Exception as e:
         logger.debug(f"[swaks_relay_test] {host}:{port}: {e}")
     return result
@@ -181,14 +177,9 @@ def swaks_starttls_check(host: str, port: int, timeout: int = 15) -> dict:
     ]
     result = {"starttls_supported": False, "ehlo_raw": ""}
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout + 5)
-        output = proc.stdout + proc.stderr
+        return_code, output = run_command(cmd, timeout=timeout + 5)
         result["ehlo_raw"] = output[:2000]
         result["starttls_supported"] = 'STARTTLS' in output.upper()
-    except subprocess.TimeoutExpired:
-        logger.debug(f"[swaks_starttls_check] {host}:{port} timed out")
-    except FileNotFoundError:
-        logger.warning("[swaks_starttls_check] swaks not found in PATH")
     except Exception as e:
         logger.debug(f"[swaks_starttls_check] {host}:{port}: {e}")
     return result
@@ -234,8 +225,7 @@ def smtp_user_enum(targets: list, wordlist: str = SMTP_USERNAMES_WORDLIST,
             '-p', str(port),
         ]
         try:
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout + 10)
-            output = proc.stdout
+            return_code, output = run_command(cmd, timeout=timeout + 10)
             all_raw.append(f"=== {host_port} ===\n{output[:2000]}")
 
             for line in output.splitlines():
@@ -247,18 +237,13 @@ def smtp_user_enum(targets: list, wordlist: str = SMTP_USERNAMES_WORDLIST,
                     if user not in result["users_found"][host_port]:
                         result["users_found"][host_port].append(user)
 
-            if proc.returncode != 0:
+            if return_code != 0:
                 logger.warning(
                     "[smtp_user_enum] %s exited %d: %s",
                     host_port,
-                    proc.returncode,
-                    (proc.stderr or output)[:200],
+                    return_code,
+                    output[:200],
                 )
-        except subprocess.TimeoutExpired:
-            logger.debug("[smtp_user_enum] %s timed out after %ds", host_port, timeout)
-        except FileNotFoundError:
-            logger.warning("[smtp_user_enum] smtp-user-enum not found in PATH")
-            break
         except Exception as e:
             logger.debug("[smtp_user_enum] %s error: %s", host_port, e)
 

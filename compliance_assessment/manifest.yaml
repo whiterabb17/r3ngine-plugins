@@ -1,6 +1,7 @@
 name: "Compliance Assessment"
 version: "1.0.0"
 author: "MistrHyde"
+icon: "icon.svg"
 description: "Post-scan compliance analysis mapping scan artefacts to PCI-DSS, HIPAA, NIST, CIS, ISO 27001, and SOC 2 controls."
 runtime:
   run after: "tier_7"
