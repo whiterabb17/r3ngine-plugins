@@ -2,6 +2,17 @@
 
 All notable changes to the r3ngine plugins repository will be documented in this file.
 
+## [v1.3.0] - 2026-07-06
+
+### Fixed / Enhanced
+
+- **Exploit Readiness Layer (`exploit_readiness_layer`) — Exploit Source Panel**:
+  - Added `useFetchExploitSource` mutation hook to `ui/api/index.ts` calling the core backend endpoint `/scan/fetch/exploit_source/<id>/`.
+  - Added an **EXPLOIT SOURCE** collapsible panel to `ui/src/VulnerabilityTable.tsx`, visible on any vulnerability record that has an `exploit_url` (Vulners NSE findings). The panel displays the exploit URL as a clickable external link and provides a **LOAD EXPLOIT CONTENT** button that triggers the backend UC-based scraper on demand. Retrieved content is rendered in a scrollable monospace pre-block styled with the plugin's cyberpunk palette (neon red `#ff003c`, dark `#05050a` background). Error states are shown inline via MUI `<Alert severity="warning">`.
+  - Plugin UI build verified clean (0 TypeScript errors).
+
+---
+
 ## [v1.0.0] - 2026-06-03
 
 ### Added
