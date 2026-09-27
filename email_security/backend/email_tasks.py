@@ -190,11 +190,7 @@ SMTP_USERNAMES_WORDLIST = '/usr/src/wordlist/smtp-usernames.txt'
 
 def smtp_user_enum(targets: list, wordlist: str = SMTP_USERNAMES_WORDLIST,
                    method: str = 'VRFY', timeout: int = 120) -> dict:
-    """Run smtp-user-enum against each host:port target individually using -t/-p.
-
-    smtp-user-enum v1.2 documents -T (targets file) but does not register it
-    in its getopts string, so -T always produces "Unknown option: T". We run
-    one subprocess per target using -t host -p port instead.
+    """Run smtp-user-enum against each host:port target individually.
 
     Args:
         targets: list of (host, port) tuples
@@ -219,10 +215,10 @@ def smtp_user_enum(targets: list, wordlist: str = SMTP_USERNAMES_WORDLIST,
         host_port = f"{host}:{port}"
         cmd = [
             'smtp-user-enum',
-            '-M', method,
+            '-m', method,
             '-U', wordlist,
-            '-t', host,
-            '-p', str(port),
+            host,
+            str(port),
         ]
         try:
             return_code, output = run_command(cmd, timeout=timeout + 10)

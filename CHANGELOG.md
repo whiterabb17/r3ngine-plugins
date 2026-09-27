@@ -2,6 +2,23 @@
 
 All notable changes to the r3ngine plugins repository will be documented in this file.
 
+## [v1.6.0] - 2026-09-27
+
+### Added
+
+- **MCP tool contracts** (`mcp.tools` in plugin manifests) for agent access via r3ngine **v3.7.7+** / r3ngine-mcp **v1.4.0**:
+  - `active_directory` **1.2.0** — AD assessments, BloodHound ingest, findings, attack paths, reports
+  - `credential_intelligence` **1.5.0** — credential tasks, redacted discoveries, hash cracking
+  - `compliance_assessment` **1.1.0** — assessments, controls, attestation, enrich
+  - `burpsuite_integration` **1.1.0** — issues, metrics, sync, health; added `backend/api_urls.py` so the host plugin loader mounts routes
+- Documented optional `mcp.tools` in `DEVELOPERS_GUIDE.md`
+
+### Changed
+
+- Marketplace / package minor bumps for remaining plugins: `exploit_readiness_layer` **1.4.0**, `active_exploitation` **1.1.0**, `metasploit_integration` **1.1.0**, `email_security` **1.2.0** (still commented in marketplace catalog)
+
+---
+
 ## [v1.3.0] - 2026-07-06
 
 ### Fixed / Enhanced

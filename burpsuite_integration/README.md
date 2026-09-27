@@ -1,5 +1,7 @@
 # Burp Suite Integration Plugin for r3ngine
 
+**Version 1.1.0**
+
 ## NOTE: This plugin has not been tested!
 ### Please open an issue for any bugs found with as much information as you can provide. Thanks!
 
@@ -9,6 +11,7 @@ A bidirectional [Burp Suite Professional](https://portswigger.net/burp/pro) insp
 
 ## Features
 
+- **MCP tools (r3ngine v3.7.7+)** — when installed and enabled, agents can list issues, metrics, sync logs, health-check Burp, and start import sync via plugin-gated MCP tools
 - **Import Burp Findings** — Pull issues from all active Burp scan tasks into r3ngine's vulnerability database
 - **Two-Phase Architecture** — Phase 1 saves raw `BurpIssue` records safely; Phase 2 correlates them to existing `Subdomain`/`EndPoint` records and creates linked `Vulnerability` entries
 - **Manual Matching** — For unmatched issues (Burp scanned a target not yet in r3ngine), use the UI to manually match them to the correct subdomain/endpoint

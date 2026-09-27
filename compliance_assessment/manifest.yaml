@@ -1,5 +1,5 @@
 name: "Compliance Assessment"
-version: "1.0.0"
+version: "1.1.0"
 author: "MistrHyde"
 icon: "icon.svg"
 description: "Post-scan compliance analysis mapping scan artefacts to PCI-DSS, HIPAA, NIST, CIS, ISO 27001, and SOC 2 controls."
@@ -14,3 +14,11 @@ ui:
   menu_item: "Compliance"
   menu_path: "/p/compliance-assessment"
   entry_export: "ComplianceDashboardPage"
+
+mcp:
+  tools:
+    - r3ngine_list_compliance_assessments
+    - r3ngine_get_compliance_assessment
+    - r3ngine_list_compliance_controls
+    - r3ngine_get_compliance_report
+    - r3ngine_enrich_compliance_control

@@ -1,6 +1,6 @@
 name: "Burp Suite Integration"
 slug: "burpsuite_integration"
-version: "1.0.0"
+version: "1.1.0"
 description: "Bidirectional Burp Suite Professional integration: import scan findings into r3ngine and push reconnaissance targets back to Burp scope."
 author: "Security-Tools-Alliance / reNgine-ng Authors & MistrHyde"
 license: "GPLv3"
@@ -22,3 +22,12 @@ ui:
   menu_path: "/p/burpsuite-integration"
   entry_export: "BurpSuiteDashboard"
   icon: "shield-alert"
+
+mcp:
+  tools:
+    - r3ngine_list_burp_issues
+    - r3ngine_get_burp_issue
+    - r3ngine_get_burp_metrics
+    - r3ngine_list_burp_sync_logs
+    - r3ngine_get_burp_health
+    - r3ngine_start_burp_sync

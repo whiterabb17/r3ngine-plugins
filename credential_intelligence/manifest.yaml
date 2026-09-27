@@ -1,6 +1,6 @@
 name: "Credential Intelligence"
 slug: "credential_intelligence"
-version: "1.4.1"
+version: "1.5.0"
 description: "Advanced authentication testing and password auditing via brutus, netexec, kerbrute, and hashcat."
 author: "MistrHyde"
 icon: "icon.png"
@@ -18,3 +18,13 @@ ui:
   menu_item: "Credential Intel"
   menu_path: "/p/credential-intelligence"
   entry_export: "CredentialDashboard"
+
+mcp:
+  tools:
+    - r3ngine_list_credential_tasks
+    - r3ngine_get_credential_task
+    - r3ngine_start_credential_task
+    - r3ngine_list_discovered_credentials
+    - r3ngine_list_hash_cracking
+    - r3ngine_get_hash_cracking
+    - r3ngine_start_hash_cracking

@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="#" target="_blank">
-    <img src="https://img.shields.io/badge/plugin-v1.0.0-informational?&logo=none" alt="Version" />
+    <img src="https://img.shields.io/badge/plugin-v1.2.0-informational?&logo=none" alt="Version" />
   </a>
   &nbsp;
   <a href="#" target="_blank">
@@ -54,6 +54,9 @@ The plugin provides an end-to-end workflow: ingest BloodHound JSON exports or ru
 ![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/aqua.png)
 
 ## Features
+
+### 🛰️ MCP (r3ngine v3.7.7+)
+*   **Plugin-gated agent tools**: when this plugin is installed and enabled, IDE agents get AD assessment, BloodHound JSON ingest, findings, attack-path, and report tools via MCP (collectors are not run by the platform).
 
 ### 🧠 AD Intelligence & Graph Engine
 *   **Semantic Neo4j Graph**: All AD objects (Domains, Forests, OUs, Users, Groups, Computers, Trusts, Subnets, Certificates, Policies, Exposures) stored as a typed graph with `AD_`-prefixed labels to avoid collision with the core r3ngine graph.
