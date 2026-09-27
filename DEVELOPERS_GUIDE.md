@@ -128,12 +128,18 @@ ui:
   entry: "ui/dist"                  # path to compiled frontend assets
   sidebar_label: "Your Plugin"      # label shown in r3ngine sidebar
   icon: "shield"                    # lucide-react icon name
+
+# Optional — MCP tools for IDE agents (host-gated when plugin enabled)
+mcp:
+  tools:
+    - r3ngine_example_plugin_tool
 ```
 
 **Validation rules enforced by the installer:**
 - `name`, `version`, and `runtime` are all required — missing any causes an immediate rollback.
 - `runtime` must contain either `run after` or `run before` (not both).
 - `temporal.workflows` and `temporal.activities` are optional but must be valid Python import paths relative to `plugins_data.{slug}.` if present.
+- `mcp.tools` is optional. Declared names are listed by `r3ngine_list_plugins` / `r3ngine_list_capabilities` only when the plugin is installed and enabled. Implement matching thin views under `/api/mcp/` that call `require_plugin(slug)` — do not open `/api/plugins/{slug}/` to the MCP sidecar.
 
 ### Tier Anchor Values
 

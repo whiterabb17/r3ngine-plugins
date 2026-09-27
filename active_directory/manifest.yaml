@@ -28,3 +28,16 @@ ui:
   menu_item: "AD Intelligence"
   menu_path: "/p/active-directory"
   entry_export: "ADPluginApp"
+
+# MCP tool names exposed when this plugin is installed and enabled.
+# Host gates /api/mcp/ad/* on Plugin.is_enabled; sidecar registers these
+# only after discovering the slug via r3ngine_list_plugins.
+mcp:
+  tools:
+    - r3ngine_list_ad_assessments
+    - r3ngine_get_ad_assessment
+    - r3ngine_start_ad_assessment
+    - r3ngine_ingest_ad_data
+    - r3ngine_list_ad_findings
+    - r3ngine_get_ad_attack_paths
+    - r3ngine_get_ad_report
