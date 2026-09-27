@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="#" target="_blank">
-    <img src="https://img.shields.io/badge/plugin-v1.4.0-informational?&logo=none" alt="Version" />
+    <img src="https://img.shields.io/badge/plugin-v1.5.0-informational?&logo=none" alt="Version" />
   </a>
   &nbsp;
   <a href="#" target="_blank">
@@ -46,6 +46,9 @@ The **Credential Intelligence** plugin is a dedicated assessment environment for
 ![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/aqua.png)
 
 ## Features
+
+### 🛰️ MCP (r3ngine v3.7.7+)
+*   **Plugin-gated agent tools**: when installed and enabled, agents can list/start credential tasks and hash cracking jobs; discovered credentials and cracked plaintext are **redacted** over MCP.
 
 ### 🔐 Authentication Testing
 *   **Web Auth**: Execute brutus for HTTP basic auth and form-based authentication testing.

@@ -1,7 +1,7 @@
 marketplace:
   - slug: active_directory
     name: "Active Directory"
-    version: "1.1.1"
+    version: "1.2.0"
     author: "MistrHyde"
     description: "Enterprise AD assessment, identity intelligence, and exposure management plugin for contracted penetration testing and consulting engagements."
     category: "Intelligence"
@@ -9,7 +9,7 @@ marketplace:
 
   - slug: exploit_readiness_layer
     name: "Exploit Readiness Layer"
-    version: "1.3.0"
+    version: "1.4.0"
     author: "MistrHyde"
     description: "Validated vulnerability confirmation using sandboxed tools. Ported to Temporal workflow."
     category: "Exploitation"
@@ -17,7 +17,7 @@ marketplace:
 
   - slug: active_exploitation
     name: "Active Exploitation"
-    version: "1.0.0"
+    version: "1.1.0"
     author: "MistrHyde"
     description: "SQLMap and deep exploitation integration running via Temporal workflows."
     category: "Exploitation"
@@ -25,7 +25,7 @@ marketplace:
 
   - slug: burpsuite_integration
     name: "Burp Suite Integration"
-    version: "1.0.0"
+    version: "1.1.0"
     author: "Security-Tools-Alliance / reNgine-ng Authors & MistrHyde"
     description: "Bidirectional Burp Suite Professional integration for findings import, correlation, manual matching, and scope management."
     category: "Integration"
@@ -33,7 +33,7 @@ marketplace:
 
   - slug: credential_intelligence
     name: "Credential Intelligence"
-    version: "1.4.1"
+    version: "1.5.0"
     author: "MistrHyde"
     description: "Advanced authentication testing and password auditing via brutus, netexec, kerbrute, and hashcat."
     category: "Intelligence"
@@ -41,7 +41,7 @@ marketplace:
 
   # - slug: email_security
   #   name: "Email Security"
-  #   version: "1.1.2"
+  #   version: "1.2.0"
   #   author: "MistrHyde"
   #   description: "SMTP open relay, user enumeration, STARTTLS, and SPF/DKIM/DMARC policy checks."
   #   category: "Security"
@@ -49,7 +49,7 @@ marketplace:
 
   - slug: metasploit_integration
     name: "Metasploit Integration"
-    version: "1.0.0"
+    version: "1.1.0"
     author: "MistrHyde"
     description: "Standalone Metasploit integration providing a 2-way interactive terminal and automated Temporal-driven template scans."
     category: "Exploitation"
@@ -57,7 +57,7 @@ marketplace:
 
   - slug: compliance_assessment
     name: "Compliance Assessment"
-    version: "1.0.0"
+    version: "1.1.0"
     author: "MistrHyde"
     description: "Post-scan compliance analysis mapping scan artefacts to PCI-DSS 4.0, HIPAA, NIST SP 800-53, CIS Controls v8, ISO 27001, and SOC 2 controls. Runs automatically after Tier 7."
     category: "Compliance"
